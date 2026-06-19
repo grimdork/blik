@@ -1,0 +1,13 @@
+$LDFLAGS=-s -w -X main.version=dev
+
+build: go
+    desc=Build the blik binary
+    cmd=go build -ldflags="$LDFLAGS" -o $bin
+
+image: oci
+    desc=Build OCI image
+    require=build
+    repo=ghcr.io/blik
+    tag=latest
+    cacert=auto
+    entrypoint=/app/blik
