@@ -14,6 +14,7 @@ type Config struct {
 	Port        string
 	Root        string
 	TemplateDir string
+	IconsDir    string
 }
 
 func (c *Config) Addr() string {
@@ -28,6 +29,7 @@ func parseConfig() *Config {
 	opts.SetOption("General", "p", "port", "Port to listen on.", "8080", false, arg.VarString, nil)
 	opts.SetOption("General", "d", "root", "Root directory to serve.", "", false, arg.VarString, nil)
 	opts.SetOption("General", "t", "templates", "Templates directory.", "", false, arg.VarString, nil)
+	opts.SetOption("General", "i", "icons", "Icons directory.", "", false, arg.VarString, nil)
 	opts.SetDefaultHelp(true)
 
 	for _, a := range os.Args[1:] {
@@ -45,11 +47,23 @@ func parseConfig() *Config {
 		}
 	}
 
+	homeDir, _ := os.UserHomeDir()
+	defaultIcons := filepath.Join(homeDir, "src", "MIT-free-icons", "icons")
+
 	cfg := &Config{
 		Host:        opts.GetString("host"),
 		Port:        opts.GetString("port"),
 		Root:        opts.GetString("root"),
 		TemplateDir: opts.GetString("templates"),
+		IconsDir:    opts.GetString("icons"),
+	}
+
+	if cfg.IconsDir == "" {
+		if v := os.Getenv("BLIK_ICONS"); v != "" {
+			cfg.IconsDir = v
+		} else {
+			cfg.IconsDir = defaultIcons
+		}
 	}
 
 	if cfg.Host == "" {

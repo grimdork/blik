@@ -6,8 +6,8 @@ import (
 	"strings"
 	"sync"
 
+	"github.com/grimdork/climate/fx"
 	"github.com/grimdork/climate/ini"
-	"github.com/grimdork/climate/loglines"
 )
 
 type Config struct {
@@ -16,6 +16,15 @@ type Config struct {
 	InfoPatterns     []string
 	MarkdownTemplate string
 	ArchiveTemplate  string
+	Thumbnails       bool
+	Symlinks         bool
+}
+
+func defaultConfig() *Config {
+	return &Config{
+		Thumbnails: true,
+		Symlinks:   true,
+	}
 }
 
 type Store struct {
@@ -50,7 +59,7 @@ func (s *Store) Invalidate(dir string) {
 func (s *Store) Preload() {
 	err := filepath.Walk(s.root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
-			loglines.Err("preload: %s: %s", path, err)
+			fx.Fprintln(os.Stderr, "{logstamp} {danger}preload:{@} {}: {}", path, err)
 			return nil
 		}
 		if info.IsDir() {
@@ -59,14 +68,18 @@ func (s *Store) Preload() {
 		return nil
 	})
 	if err != nil {
-		loglines.Err("preload: %s", err)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}preload:{@} {}", err)
 	}
 }
 
 func (s *Store) loadConfig(dir string) *Config {
-	cfg := loadFile(filepath.Join(dir, ".blik"))
+	blikPath := filepath.Join(dir, ".blik")
+	_, err := os.Stat(blikPath)
+	hasBlik := err == nil
+
+	cfg := loadFile(blikPath)
 	if cfg == nil {
-		cfg = &Config{}
+		cfg = defaultConfig()
 	}
 
 	if dir != s.root {
@@ -74,7 +87,7 @@ func (s *Store) loadConfig(dir string) *Config {
 		// Stop at filesystem root (parent == dir) and above our serve root.
 		if parent != dir && strings.HasPrefix(dir, s.root) {
 			parentCfg := s.GetConfig(parent)
-			cfg = mergeConfigs(parentCfg, cfg)
+			cfg = mergeConfigs(parentCfg, cfg, hasBlik)
 		}
 	}
 
@@ -96,10 +109,17 @@ func loadFile(path string) *Config {
 		return nil
 	}
 
-	cfg := &Config{}
+	cfg := defaultConfig()
+	loaded := 0
 	for _, secName := range inif.Order {
 		sec := inif.Sections[secName]
 		if sec == nil {
+			continue
+		}
+
+		if secName == "blik" {
+			cfg.Thumbnails = sec.GetBool("thumbnails", cfg.Thumbnails)
+			cfg.Symlinks = sec.GetBool("symlinks", cfg.Symlinks)
 			continue
 		}
 
@@ -107,6 +127,7 @@ func loadFile(path string) *Config {
 		if t == "" {
 			continue
 		}
+		loaded++
 
 		patterns := splitPatterns(secName)
 		switch t {
@@ -125,6 +146,8 @@ func loadFile(path string) *Config {
 			cfg.InfoPatterns = append(cfg.InfoPatterns, patterns...)
 		}
 	}
+
+	fx.Println("{logstamp} {info}config:{@} {} — loaded .blik with {} type(s)", path, loaded)
 	return cfg
 }
 
@@ -140,7 +163,7 @@ func splitPatterns(s string) []string {
 	return result
 }
 
-func mergeConfigs(parent, local *Config) *Config {
+func mergeConfigs(parent, local *Config, hasBlik bool) *Config {
 	if len(local.MarkdownPatterns) == 0 {
 		local.MarkdownPatterns = parent.MarkdownPatterns
 	}
@@ -155,6 +178,10 @@ func mergeConfigs(parent, local *Config) *Config {
 	}
 	if local.ArchiveTemplate == "" {
 		local.ArchiveTemplate = parent.ArchiveTemplate
+	}
+	if !hasBlik {
+		local.Thumbnails = parent.Thumbnails
+		local.Symlinks = parent.Symlinks
 	}
 	return local
 }

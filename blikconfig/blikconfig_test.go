@@ -42,7 +42,7 @@ func TestMergeConfigs(t *testing.T) {
 
 	t.Run("inherits from parent when local is empty", func(t *testing.T) {
 		local := &Config{}
-		got := mergeConfigs(parent, local)
+		got := mergeConfigs(parent, local, false)
 		if got != local {
 			t.Error("mergeConfigs should return local")
 		}
@@ -65,7 +65,7 @@ func TestMergeConfigs(t *testing.T) {
 			MarkdownPatterns: []string{"*.mdx"},
 			ArchiveTemplate:  "local/archive",
 		}
-		got := mergeConfigs(parent, local)
+		got := mergeConfigs(parent, local, true)
 		if len(got.MarkdownPatterns) != 1 || got.MarkdownPatterns[0] != "*.mdx" {
 			t.Error("should keep local markdown patterns")
 		}

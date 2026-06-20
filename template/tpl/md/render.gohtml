@@ -11,7 +11,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 .container pre{background:var(--hover);padding:12px;border-radius:4px;overflow-x:auto}
 .container code{font-size:.9rem}
 .container a{color:var(--accent)}
-.container h2,.container h3,.container h4,.container h5,.container h6{margin-top:24px;color:var(--text)}
+.container h2,.container h3,.container h4,.container h5,.container h6{margin-top:24px}
 :root {
 	--bg: #fff;
 	--text: #333;
@@ -23,7 +23,22 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 	--meta-label: #555;
 	--toc-bg: #fff;
 	--toc-border: #ccc;
+	--heading-h1: #894433;
+	--heading-h2: #557a60;
+	--heading-h3: #3b597c;
+	--heading-h4: #6d5a7a;
+	--heading-h5: #8a7a6a;
+	--heading-h6: #a0978b;
+	--hl-string: #5d7a5a;
+	--hl-comment: #a0978b;
+	--hl-number: #8a6e4b;
+	--hl-keyword: #7b4a3d;
+	--hl-func: #5d7f9c;
+	--hl-command: #5d7a5a;
+	--th-bg: #ede3d4;
+	--th-color: var(--text);
 }
+
 [data-theme=dark] {
 	--bg: #1a1a2e;
 	--text: #e0e0e0;
@@ -35,17 +50,63 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 	--meta-label: #aaa;
 	--toc-bg: #1a1a2e;
 	--toc-border: #444;
+	--heading-h1: #e2a476;
+	--heading-h2: #87af97;
+	--heading-h3: #8fa0ba;
+	--heading-h4: #b89fc7;
+	--heading-h5: #a4a090;
+	--heading-h6: #7a8285;
+	--hl-string: #87af97;
+	--hl-comment: #b8a87a;
+	--hl-number: #c9b18c;
+	--hl-keyword: #d4a6a6;
+	--hl-func: #8fa0ba;
+	--hl-command: #87af97;
+	--th-bg: #2e3a4d;
+	--th-color: var(--text);
 }
-.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--header-bg);border-bottom:1px solid var(--border)}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--header-bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20;box-shadow:0 1px 4px rgba(0,0,0,.1)}
 .topbar .title{font-size:.95rem;font-weight:600}
 .topbar .controls{display:flex;align-items:center;gap:8px}
 .topbar button{background:none;border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--text);cursor:pointer;font-size:.8rem}
 .topbar button:hover{background:var(--hover)}
 .toc{position:relative}
-.toc-drop{display:none;position:absolute;right:0;top:100%;background:var(--toc-bg);border:1px solid var(--toc-border);border-radius:4px;min-width:200px;max-height:300px;overflow-y:auto;z-index:10;margin-top:4px}
+.toc-drop{display:none;position:absolute;right:0;top:100%;background:var(--toc-bg);border:1px solid var(--toc-border);border-radius:4px;min-width:200px;max-height:300px;overflow-y:auto;z-index:30;margin-top:4px}
 .toc.open .toc-drop{display:block}
 .toc-drop a{display:block;padding:6px 12px;color:var(--accent);text-decoration:none;font-size:.85rem;border-bottom:1px solid var(--border)}
 .toc-drop a:hover{background:var(--hover)}
+.toc button::after{content:" ▾"}
+.toc.open button::after{content:" ▴"}
+.container blockquote{border-left:4px solid var(--accent);padding:8px 16px;margin:16px 0;background:var(--meta-bg);border-radius:0 4px 4px 0}
+.container blockquote p{margin:4px 0}
+.container table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.9rem}
+.container th,.container td{border:1px solid var(--border);padding:8px 12px;text-align:left}
+.container th{background:var(--th-bg);color:var(--th-color);font-weight:600}
+.container tr:nth-child(even){background:var(--hover)}
+.container pre{background:var(--meta-bg);padding:16px;border-radius:6px;overflow-x:auto;border:1px solid var(--border);font-size:.85rem;line-height:1.5}
+.container code{background:var(--hover);padding:2px 6px;border-radius:3px;font-size:.85rem}
+.container pre code{background:none;padding:0;border-radius:0}
+.container h1{border-bottom:2px solid var(--border);padding-bottom:8px;margin-top:32px;font-size:1.6rem}
+.container h2{border-bottom:1px solid var(--border);padding-bottom:6px;margin-top:28px;font-size:1.3rem}
+.container h3{margin-top:24px;font-size:1.1rem}
+.container h4{margin-top:20px}
+.container hr{border:none;height:1px;background:linear-gradient(to right,var(--border),transparent);margin:24px 0}
+.container img{border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1);max-width:100%}
+[data-theme=dark] .container img{box-shadow:0 2px 8px rgba(0,0,0,.4)}
+.container ul,.container ol{padding-left:24px}
+.container li{margin:4px 0}
+.container .heading-h1{color:var(--heading-h1)}
+.container .heading-h2{color:var(--heading-h2)}
+.container .heading-h3{color:var(--heading-h3)}
+.container .heading-h4{color:var(--heading-h4)}
+.container .heading-h5{color:var(--heading-h5)}
+.container .heading-h6{color:var(--heading-h6)}
+.container .hl-string{color:var(--hl-string)}
+.container .hl-comment{color:var(--hl-comment);font-style:italic}
+.container .hl-number{color:var(--hl-number)}
+.container .hl-keyword{color:var(--hl-keyword)}
+.container .hl-func{color:var(--hl-func)}
+.container .hl-command{color:var(--hl-command)}
 {{if .CSS}}{{.CSS}}{{end}}
 </style>
 <style media="(prefers-color-scheme:dark)">{{if .DarkCSS}}{{.DarkCSS}}{{end}}</style>

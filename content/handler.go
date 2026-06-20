@@ -3,6 +3,10 @@ package content
 import (
 	"fmt"
 	"html/template"
+	"image"
+	_ "image/gif"
+	_ "image/jpeg"
+	_ "image/png"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -25,7 +29,8 @@ type Handler struct {
 	tmpl      *bliktmpl.Engine
 }
 
-func NewHandler(root string, bs *blikconfig.Store, tmpl *bliktmpl.Engine) *Handler {
+func NewHandler(root string, bs *blikconfig.Store, tmpl *bliktmpl.Engine, iconDir string) *Handler {
+	initIconCache(iconDir)
 	return &Handler{
 		root:      root,
 		blikStore: bs,
@@ -47,6 +52,18 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	lfi, err := os.Lstat(fullPath)
+	if err != nil {
+		http.NotFound(w, r)
+		return
+	}
+
+	cfg := h.blikStore.GetConfig(filepath.Dir(fullPath))
+	if !cfg.Symlinks && lfi.Mode()&os.ModeSymlink != 0 {
+		http.NotFound(w, r)
+		return
+	}
+
 	info, err := os.Stat(fullPath)
 	if err != nil {
 		http.NotFound(w, r)
@@ -57,7 +74,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if info.IsDir() {
 		dir = fullPath
 	}
-	cfg := h.blikStore.GetConfig(dir)
+	cfg = h.blikStore.GetConfig(dir)
 
 	if !info.IsDir() {
 		name := filepath.Base(fullPath)
@@ -80,6 +97,11 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		}
 
 		http.ServeFile(w, r, fullPath)
+		return
+	}
+
+	if !strings.HasSuffix(r.URL.Path, "/") {
+		http.Redirect(w, r, r.URL.Path+"/", http.StatusMovedPermanently)
 		return
 	}
 
@@ -128,7 +150,87 @@ func (h *Handler) serveInfo(w http.ResponseWriter, r *http.Request, fullPath, na
 		return
 	}
 
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	ext := strings.ToLower(filepath.Ext(name))
+	if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".bmp" || ext == ".ico" {
+		h.serveImageInfo(w, r, fullPath, name)
+		return
+	}
+
 	fmt.Fprintf(w, "<html><body><h1>%s</h1><p>No detailed information available.</p></body></html>", name)
+}
+
+func (h *Handler) serveImageInfo(w http.ResponseWriter, r *http.Request, fullPath, name string) {
+	f, err := os.Open(fullPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	dim := "unknown"
+	format := "unknown"
+	if cfg, decName, err := image.DecodeConfig(f); err == nil {
+		format = decName
+		dim = fmt.Sprintf("%dx%d", cfg.Width, cfg.Height)
+	}
+	f.Seek(0, 0)
+
+	if format == "unknown" {
+		format = guessFormat(name)
+	}
+
+	fi, err := f.Stat()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>%s</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:24px auto;padding:0 16px;background:#fff;color:#333}
+img{max-width:100%%;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+table{width:100%%;border-collapse:collapse;margin-top:16px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #ddd}
+th{font-weight:600;color:#555;width:120px}
+h1{border-bottom:2px solid #ddd;padding-bottom:8px}
+</style>
+</head>
+<body>
+<h1>%s</h1>
+<img src="?">
+<table>
+<tr><th>Format</th><td>%s</td></tr>
+<tr><th>Dimensions</th><td>%s</td></tr>
+<tr><th>File size</th><td>%s</td></tr>
+</table>
+</body>
+</html>`, name, name, format, dim, formatSize(fi.Size()))
+}
+
+func guessFormat(name string) string {
+	ext := strings.ToLower(filepath.Ext(name))
+	switch ext {
+	case ".jpg", ".jpeg":
+		return "JPEG"
+	case ".png":
+		return "PNG"
+	case ".gif":
+		return "GIF"
+	case ".webp":
+		return "WebP"
+	case ".bmp":
+		return "BMP"
+	case ".ico":
+		return "ICO"
+	}
+	return ext
 }
 
 func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
@@ -165,34 +267,34 @@ func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullP
 }
 
 type dirEntry struct {
-	Name    string
-	Size    string
-	ModTime string
-	IsDir   bool
-	HasInfo bool
+	Name      string
+	Size      string
+	ModTime   string
+	IsDir     bool
+	HasInfo   bool
+	Icon      template.HTML
+	Thumbnail string
 }
 
 func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPath, urlPath string, cfg *blikconfig.Config) {
-	f, err := os.Open(fullPath)
-	if err != nil {
-		http.NotFound(w, r)
-		return
-	}
-	defer f.Close()
-
-	names, err := f.Readdirnames(-1)
+	dirents, err := os.ReadDir(fullPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
 	var entries []dirEntry
-	for _, name := range names {
-		if name == ".blik" {
+	for _, de := range dirents {
+		name := de.Name()
+		if name == ".blik" || strings.HasSuffix(name, ".thumb") {
 			continue
 		}
 
-		fi, err := os.Stat(filepath.Join(fullPath, name))
+		if !cfg.Symlinks && de.Type()&os.ModeSymlink != 0 {
+			continue
+		}
+
+		fi, err := de.Info()
 		if err != nil {
 			continue
 		}
@@ -203,7 +305,13 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 			ModTime: fi.ModTime().Format(time.RFC822),
 			IsDir:   fi.IsDir(),
 			HasInfo: cfg.HasInfo(name),
+			Icon:    template.HTML(iconSVG(name, fi.IsDir())),
 		}
+
+		if !fi.IsDir() && cfg.Thumbnails && isImage(name) && thumbExists(filepath.Join(fullPath, name)) {
+			e.Thumbnail = name + ".thumb"
+		}
+
 		entries = append(entries, e)
 	}
 

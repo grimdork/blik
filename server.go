@@ -3,10 +3,11 @@ package main
 import (
 	"context"
 	"net/http"
+	"os"
 	"time"
 
 	"github.com/grimdork/climate/daemon"
-	"github.com/grimdork/climate/loglines"
+	"github.com/grimdork/climate/fx"
 )
 
 func serve(cfg *Config, handler http.Handler) {
@@ -19,20 +20,20 @@ func serve(cfg *Config, handler http.Handler) {
 	}
 
 	go func() {
-		loglines.Msg("listening on %s, serving %s", cfg.Addr(), cfg.Root)
+		fx.Println("{logstamp} {success}listening{@} on {}, serving {}", cfg.Addr(), cfg.Root)
 		if err := srv.ListenAndServe(); err != nil && err != http.ErrServerClosed {
-			loglines.Err("server error: %s", err)
+			fx.Fprintln(os.Stderr, "{logstamp} {danger}server error:{@} {}", err)
 		}
 	}()
 
 	<-daemon.BreakChannel()
 
-	loglines.Msg("shutting down...")
+	fx.Println("{logstamp} {warning}shutting down...{@}")
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 
 	if err := srv.Shutdown(ctx); err != nil {
-		loglines.Err("shutdown error: %s", err)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}shutdown error:{@} {}", err)
 	}
-	loglines.Msg("stopped")
+	fx.Println("{logstamp} {success}stopped{@}")
 }

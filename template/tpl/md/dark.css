@@ -9,4 +9,20 @@
 	--meta-label: #aaa;
 	--toc-bg: #1a1a2e;
 	--toc-border: #444;
+	--heading-h1: #e2a476;
+	--heading-h2: #87af97;
+	--heading-h3: #8fa0ba;
+	--heading-h4: #b89fc7;
+	--heading-h5: #a4a090;
+	--heading-h6: #7a8285;
+	--hl-string: #87af97;
+	--hl-comment: #b8a87a;
+	--hl-number: #c9b18c;
+	--hl-keyword: #d4a6a6;
+	--hl-func: #8fa0ba;
+	--hl-command: #87af97;
+	--th-bg: #2e3a4d;
+	--th-color: var(--text);
 }
+
+[data-theme=dark] .container img{box-shadow:0 2px 8px rgba(0,0,0,.4)}

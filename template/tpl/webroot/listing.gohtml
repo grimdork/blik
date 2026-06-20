@@ -53,6 +53,8 @@ a:hover{text-decoration:underline}
 .info{text-align:center}
 .info a{padding:2px 8px;border:1px solid var(--border);border-radius:4px;font-size:.75rem;color:var(--meta-label);cursor:pointer}
 .info a:hover{background:var(--hover);text-decoration:none}
+td:first-child svg{width:20px;height:20px;vertical-align:middle;margin-right:6px}
+td:first-child .thumb{width:32px;height:32px;object-fit:cover;vertical-align:middle;margin-right:6px;border-radius:3px}
 </style>
 <style media="(prefers-color-scheme:dark)">{{if .DarkCSS}}{{.DarkCSS}}{{end}}</style>
 <style media="print">{{if .PrintCSS}}{{.PrintCSS}}{{end}}</style>
@@ -68,7 +70,7 @@ a:hover{text-decoration:underline}
 <tr><th>Name</th><th>Size</th><th>Modified</th><th></th></tr>
 {{range .Entries}}
 <tr>
-<td>{{if .IsDir}}<a href="{{.Name}}/">{{.Name}}/</a>{{else}}<a href="{{.Name}}">{{.Name}}</a>{{end}}</td>
+<td>{{if .Thumbnail}}<img class="thumb" src="{{.Thumbnail}}" alt="">{{else}}{{.Icon}}{{end}}<a href="{{if .IsDir}}{{.Name}}/{{else}}{{.Name}}{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
 <td class="size">{{.Size}}</td>
 <td class="time">{{.ModTime}}</td>
 <td class="info">{{if .HasInfo}}<a href="{{.Name}}?info">i</a>{{end}}</td>

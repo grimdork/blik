@@ -14,7 +14,7 @@ func main() {
 	blikCfg := blikconfig.NewStore(cfg.Root)
 	blikCfg.Preload()
 	tmpl := template.NewEngine(cfg.TemplateDir)
-	h := content.NewHandler(cfg.Root, blikCfg, tmpl)
+	h := content.NewHandler(cfg.Root, blikCfg, tmpl, cfg.IconsDir)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", healthHandler)
