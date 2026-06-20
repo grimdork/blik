@@ -136,13 +136,25 @@ func mergeConfigs(parent, local *Config) *Config {
 	return cfg
 }
 
+var defaultMarkdownPatterns = []string{"*.md", "*.markdown"}
+var defaultArchivePatterns = []string{"*.zip", "*.tar", "*.tar.gz", "*.tgz"}
+
 func (c *Config) MatchHandler(name string) string {
-	for _, p := range c.MarkdownPatterns {
+	patterns := c.MarkdownPatterns
+	if len(patterns) == 0 {
+		patterns = defaultMarkdownPatterns
+	}
+	for _, p := range patterns {
 		if ok, _ := filepath.Match(p, name); ok {
 			return "markdown"
 		}
 	}
-	for _, p := range c.ArchivePatterns {
+
+	patterns = c.ArchivePatterns
+	if len(patterns) == 0 {
+		patterns = defaultArchivePatterns
+	}
+	for _, p := range patterns {
 		if ok, _ := filepath.Match(p, name); ok {
 			return "archive"
 		}
