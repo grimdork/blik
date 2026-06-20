@@ -50,6 +50,7 @@ func (s *Store) Invalidate(dir string) {
 func (s *Store) Preload() {
 	err := filepath.Walk(s.root, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
+			loglines.Err("preload: %s: %s", path, err)
 			return nil
 		}
 		if info.IsDir() {
@@ -123,33 +124,22 @@ func splitPatterns(s string) []string {
 }
 
 func mergeConfigs(parent, local *Config) *Config {
-	cfg := &Config{}
-	if len(local.MarkdownPatterns) > 0 {
-		cfg.MarkdownPatterns = local.MarkdownPatterns
-	} else {
-		cfg.MarkdownPatterns = parent.MarkdownPatterns
+	if len(local.MarkdownPatterns) == 0 {
+		local.MarkdownPatterns = parent.MarkdownPatterns
 	}
-	if len(local.ArchivePatterns) > 0 {
-		cfg.ArchivePatterns = local.ArchivePatterns
-	} else {
-		cfg.ArchivePatterns = parent.ArchivePatterns
+	if len(local.ArchivePatterns) == 0 {
+		local.ArchivePatterns = parent.ArchivePatterns
 	}
-	if len(local.InfoPatterns) > 0 {
-		cfg.InfoPatterns = local.InfoPatterns
-	} else {
-		cfg.InfoPatterns = parent.InfoPatterns
+	if len(local.InfoPatterns) == 0 {
+		local.InfoPatterns = parent.InfoPatterns
 	}
-	if local.MarkdownTemplate != "" {
-		cfg.MarkdownTemplate = local.MarkdownTemplate
-	} else {
-		cfg.MarkdownTemplate = parent.MarkdownTemplate
+	if local.MarkdownTemplate == "" {
+		local.MarkdownTemplate = parent.MarkdownTemplate
 	}
-	if local.ArchiveTemplate != "" {
-		cfg.ArchiveTemplate = local.ArchiveTemplate
-	} else {
-		cfg.ArchiveTemplate = parent.ArchiveTemplate
+	if local.ArchiveTemplate == "" {
+		local.ArchiveTemplate = parent.ArchiveTemplate
 	}
-	return cfg
+	return local
 }
 
 func (c *Config) MatchHandler(name string) string {

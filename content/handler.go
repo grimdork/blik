@@ -16,6 +16,9 @@ import (
 	bliktmpl "blik/template"
 )
 
+const renderSuffix = "/render.gohtml"
+const archiveSuffix = "/archive.gohtml"
+
 type Handler struct {
 	root      string
 	blikStore *blikconfig.Store
@@ -32,10 +35,6 @@ func NewHandler(root string, bs *blikconfig.Store, tmpl *bliktmpl.Engine) *Handl
 
 func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	path := filepath.Clean(r.URL.Path)
-	if strings.HasPrefix(path, "/..") || strings.Contains(path, "..") {
-		http.NotFound(w, r)
-		return
-	}
 
 	if strings.HasSuffix(path, ".blik") {
 		http.NotFound(w, r)
@@ -75,7 +74,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			}
 		} else {
 			if cfg.HasInfo(name) {
-				h.serveInfo(w, r, fullPath, name)
+				h.serveInfo(w, r, fullPath, name, cfg)
 				return
 			}
 		}
@@ -101,9 +100,9 @@ func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath
 	}
 
 	css, darkCSS, printCSS := h.tmpl.CSS("md")
-	tmplName := "md/render.gohtml"
+	tmplName := "md" + renderSuffix
 	if cfg.MarkdownTemplate != "" {
-		tmplName = cfg.MarkdownTemplate + "/render.gohtml"
+		tmplName = cfg.MarkdownTemplate + renderSuffix
 	}
 
 	out, err := h.tmpl.Render(tmplName, map[string]any{
@@ -123,16 +122,16 @@ func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath
 	fmt.Fprint(w, out)
 }
 
-func (h *Handler) serveInfo(w http.ResponseWriter, r *http.Request, fullPath, name string) {
+func (h *Handler) serveInfo(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
 	if strings.HasSuffix(name, ".zip") || strings.HasSuffix(name, ".tar.gz") || strings.HasSuffix(name, ".tgz") || strings.HasSuffix(name, ".tar") {
-		h.serveArchiveInfo(w, r, fullPath, name)
+		h.serveArchiveInfo(w, r, fullPath, name, cfg)
 		return
 	}
 
 	fmt.Fprintf(w, "<html><body><h1>%s</h1><p>No detailed information available.</p></body></html>", name)
 }
 
-func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullPath, name string) {
+func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
 	ainfo, err := archive.Read(fullPath)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -140,7 +139,11 @@ func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullP
 	}
 
 	size := formatSize(ainfo.TotalSize)
-	tmplName := "archive/archive.gohtml"
+	tmplName := "archive" + archiveSuffix
+	if cfg.ArchiveTemplate != "" {
+		tmplName = cfg.ArchiveTemplate + archiveSuffix
+	}
+
 	css, darkCSS, printCSS := h.tmpl.CSS("archive")
 	out, err := h.tmpl.Render(tmplName, map[string]any{
 		"FileName":  name,
@@ -167,12 +170,6 @@ type dirEntry struct {
 	ModTime string
 	IsDir   bool
 	HasInfo bool
-}
-
-type listingData struct {
-	Title   string
-	Path    string
-	Entries []dirEntry
 }
 
 func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPath, urlPath string, cfg *blikconfig.Config) {
@@ -217,10 +214,13 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 		return entries[i].Name < entries[j].Name
 	})
 
-	out, err := h.tmpl.Render("webroot/listing.gohtml", listingData{
-		Title:   "Index of " + urlPath,
-		Path:    urlPath,
-		Entries: entries,
+	css, darkCSS, printCSS := h.tmpl.CSS("webroot")
+	out, err := h.tmpl.Render("webroot/listing.gohtml", map[string]any{
+		"Title":    "Index of " + urlPath,
+		"Entries":  entries,
+		"CSS":      css,
+		"DarkCSS":  darkCSS,
+		"PrintCSS": printCSS,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

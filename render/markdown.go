@@ -3,7 +3,7 @@ package render
 import (
 	"regexp"
 
-	"github.com/grimdork/markulator"
+	mk "github.com/grimdork/markulator"
 )
 
 type Heading struct {
@@ -64,4 +64,3 @@ func extractHeadings(html string) []Heading {
 func stripHTMLTags(s string) string {
 	return stripRe.ReplaceAllString(s, "")
 }
-

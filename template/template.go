@@ -94,8 +94,30 @@ var builtinTemplates = map[string]string{
 	"archive/archive.gohtml": archiveTemplate,
 }
 
-const themeCSS = `:root{--bg:#fff;--text:#333;--border:#ddd;--accent:#1967d2;--hover:#f5f5f5;--header-bg:#fafafa;--meta-bg:#f5f5f5;--meta-label:#555;--toc-bg:#fff;--toc-border:#ccc}
-[data-theme=dark]{--bg:#1a1a2e;--text:#e0e0e0;--border:#333;--accent:#64b5f6;--hover:#2a2a3e;--header-bg:#16213e;--meta-bg:#2a2a3e;--meta-label:#aaa;--toc-bg:#1a1a2e;--toc-border:#444}
+const themeCSS = `:root {
+	--bg: #fff;
+	--text: #333;
+	--border: #ddd;
+	--accent: #1967d2;
+	--hover: #f5f5f5;
+	--header-bg: #fafafa;
+	--meta-bg: #f5f5f5;
+	--meta-label: #555;
+	--toc-bg: #fff;
+	--toc-border: #ccc;
+}
+[data-theme=dark] {
+	--bg: #1a1a2e;
+	--text: #e0e0e0;
+	--border: #333;
+	--accent: #64b5f6;
+	--hover: #2a2a3e;
+	--header-bg: #16213e;
+	--meta-bg: #2a2a3e;
+	--meta-label: #aaa;
+	--toc-bg: #1a1a2e;
+	--toc-border: #444;
+}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--header-bg);border-bottom:1px solid var(--border)}
 .topbar .title{font-size:.95rem;font-weight:600}
 .topbar .controls{display:flex;align-items:center;gap:8px}
@@ -107,7 +129,24 @@ const themeCSS = `:root{--bg:#fff;--text:#333;--border:#ddd;--accent:#1967d2;--h
 .toc-drop a{display:block;padding:6px 12px;color:var(--accent);text-decoration:none;font-size:.85rem;border-bottom:1px solid var(--border)}
 .toc-drop a:hover{background:var(--hover)}`
 
-const themeJS = `(function(){var t=localStorage.getItem('blik-theme'),b=function(){var e=document.querySelector('.theme-btn');if(e)e.textContent=t==='dark'?'Light':'Dark'};if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',t);b()})();function toggleTheme(){var h=document.documentElement,t=h.getAttribute('data-theme')==='dark'?'light':'dark';h.setAttribute('data-theme',t);localStorage.setItem('blik-theme',t);var b=document.querySelector('.theme-btn');if(b)b.textContent=t==='dark'?'Light':'Dark'}`
+const themeJS = `(function(){
+	var t=localStorage.getItem('blik-theme'),
+		b=function(){
+			var e=document.querySelector('.theme-btn');
+			if(e) e.textContent=t==='dark'?'Light':'Dark'
+		};
+	if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}
+	document.documentElement.setAttribute('data-theme',t);
+	b()
+})();
+function toggleTheme(){
+	var h=document.documentElement,
+		t=h.getAttribute('data-theme')==='dark'?'light':'dark';
+	h.setAttribute('data-theme',t);
+	localStorage.setItem('blik-theme',t);
+	var b=document.querySelector('.theme-btn');
+	if(b) b.textContent=t==='dark'?'Light':'Dark'
+}`
 
 const listingTemplate = `<!DOCTYPE html>
 <html lang="en">
@@ -118,6 +157,7 @@ const listingTemplate = `<!DOCTYPE html>
 <style>
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:24px auto;padding:0 16px;background:var(--bg);color:var(--text)}
 ` + themeCSS + `
+{{if .CSS}}{{.CSS}}{{end}}
 table{width:100%;border-collapse:collapse;margin-top:16px}
 th,td{text-align:left;padding:4px 8px}
 th{border-bottom:2px solid var(--border);font-weight:600;font-size:.85rem;color:var(--meta-label)}
@@ -131,6 +171,8 @@ a:hover{text-decoration:underline}
 .info a{padding:2px 8px;border:1px solid var(--border);border-radius:4px;font-size:.75rem;color:var(--meta-label);cursor:pointer}
 .info a:hover{background:var(--hover);text-decoration:none}
 </style>
+<style media="(prefers-color-scheme:dark)">{{if .DarkCSS}}{{.DarkCSS}}{{end}}</style>
+<style media="print">{{if .PrintCSS}}{{.PrintCSS}}{{end}}</style>
 </head>
 <body>
 <header class="topbar">
