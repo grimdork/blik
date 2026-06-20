@@ -11,3 +11,12 @@ image: oci
     tag=latest
     cacert=auto
     entrypoint=/app/blik
+
+vet:
+    desc=Run go vet
+    cmd=go vet ./...
+
+test:
+    desc=Run tests
+    require=vet
+    cmd=go test ./...
