@@ -1,4 +1,4 @@
-$LDFLAGS=-s -w -X main.version=dev
+$LDFLAGS=-s -w -X main.version=$(git describe --tags --always 2>/dev/null || echo dev) -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)
 
 build: go
     desc=Build the blik binary

@@ -1,24 +1,23 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
+
+	"blik/blikconfig"
+	"blik/content"
+	"blik/template"
 )
 
 func main() {
-	http.HandleFunc("/", handleRoot)
-	http.HandleFunc("/health", handleHealth)
-	addr := fmt.Sprintf(":%s", "8080")
-	log.Printf("listening on %s", addr)
-	log.Fatal(http.ListenAndServe(addr, nil))
-}
+	cfg := parseConfig()
 
-func handleRoot(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintln(w, "blik running")
-}
+	blikCfg := blikconfig.NewStore(cfg.Root)
+	tmpl := template.NewEngine(cfg.TemplateDir)
+	h := content.NewHandler(cfg.Root, blikCfg, tmpl)
 
-func handleHealth(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	fmt.Fprintln(w, "ok")
+	mux := http.NewServeMux()
+	mux.HandleFunc("/health", healthHandler)
+	mux.Handle("/", h)
+
+	serve(cfg, recoveryMiddleware(loggingMiddleware(mux)))
 }
