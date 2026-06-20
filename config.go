@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 
 	"github.com/grimdork/climate/arg"
 )
@@ -76,6 +77,11 @@ func parseConfig() *Config {
 		fmt.Fprintf(os.Stderr, "Error: root directory is required (-d/--root or BLIK_ROOT)\n")
 		opts.PrintHelp()
 		os.Exit(2)
+	}
+
+	abs, err := filepath.Abs(cfg.Root)
+	if err == nil {
+		cfg.Root = abs
 	}
 
 	return cfg
