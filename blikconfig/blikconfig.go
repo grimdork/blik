@@ -18,6 +18,7 @@ type Config struct {
 	ArchiveTemplate  string
 	Thumbnails       bool
 	Symlinks         bool
+	IndexFiles       []string
 }
 
 func defaultConfig() *Config {
@@ -120,6 +121,9 @@ func loadFile(path string) *Config {
 		if secName == "blik" {
 			cfg.Thumbnails = sec.GetBool("thumbnails", cfg.Thumbnails)
 			cfg.Symlinks = sec.GetBool("symlinks", cfg.Symlinks)
+			if idx := sec.GetString("index", ""); idx != "" {
+				cfg.IndexFiles = splitPatterns(idx)
+			}
 			continue
 		}
 
@@ -178,6 +182,9 @@ func mergeConfigs(parent, local *Config, hasBlik bool) *Config {
 	}
 	if local.ArchiveTemplate == "" {
 		local.ArchiveTemplate = parent.ArchiveTemplate
+	}
+	if len(local.IndexFiles) == 0 {
+		local.IndexFiles = parent.IndexFiles
 	}
 	if !hasBlik {
 		local.Thumbnails = parent.Thumbnails

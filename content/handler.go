@@ -77,26 +77,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	cfg = h.blikStore.GetConfig(dir)
 
 	if !info.IsDir() {
-		name := filepath.Base(fullPath)
-		_, wantsInfo := r.URL.Query()["info"]
-		if !wantsInfo {
-			switch cfg.MatchHandler(name) {
-			case "markdown":
-				h.serveMarkdown(w, r, fullPath, name, cfg)
-				return
-			case "archive":
-				w.Header().Set("Content-Type", "application/octet-stream")
-				http.ServeFile(w, r, fullPath)
-				return
-			}
-		} else {
-			if cfg.HasInfo(name) {
-				h.serveInfo(w, r, fullPath, name, cfg)
-				return
-			}
-		}
-
-		http.ServeFile(w, r, fullPath)
+		h.serveFile(w, r, fullPath, filepath.Base(fullPath), cfg)
 		return
 	}
 
@@ -105,7 +86,38 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	for _, idx := range cfg.IndexFiles {
+		idxPath := filepath.Join(fullPath, idx)
+		if fi, err := os.Stat(idxPath); err == nil && !fi.IsDir() {
+			dirCfg := h.blikStore.GetConfig(filepath.Dir(idxPath))
+			h.serveFile(w, r, idxPath, idx, dirCfg)
+			return
+		}
+	}
+
 	h.serveDirectory(w, r, fullPath, path, cfg)
+}
+
+func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
+	_, wantsInfo := r.URL.Query()["info"]
+	if !wantsInfo {
+		switch cfg.MatchHandler(name) {
+		case "markdown":
+			h.serveMarkdown(w, r, fullPath, name, cfg)
+			return
+		case "archive":
+			w.Header().Set("Content-Type", "application/octet-stream")
+			http.ServeFile(w, r, fullPath)
+			return
+		}
+	} else {
+		if cfg.HasInfo(name) {
+			h.serveInfo(w, r, fullPath, name, cfg)
+			return
+		}
+	}
+
+	http.ServeFile(w, r, fullPath)
 }
 
 func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {

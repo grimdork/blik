@@ -1,22 +1,28 @@
-$LDFLAGS=-s -w -X main.version=$(git describe --tags --always 2>/dev/null || echo dev) -X main.commit=$(git rev-parse --short HEAD) -X main.date=$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || echo unknown)
+$OWNER=grimdork
 
 build: go
-    desc=Build the blik binary
-    cmd=go build -ldflags="$LDFLAGS" -o $bin
+	desc=Build the blik binary
 
-image: oci
-    desc=Build OCI image
-    require=build
-    repo=ghcr.io/blik
-    tag=latest
-    cacert=auto
-    entrypoint=/app/blik
+linux: go
+	desc=Build the Linux binary
+	arch=amd64
+	os=linux
+
+blik: oci:scw
+	desc=Build and push the OCI image
+	require=linux
+	region=nl-ams
+	tag=latest
+	cacert=auto
+	entrypoint=/app/blik
+	os=linux
+	arch=amd64
 
 vet:
-    desc=Run go vet
-    cmd=go vet ./...
+	desc=Run go vet
+	cmd=go vet ./...
 
 test:
-    desc=Run tests
-    require=vet
-    cmd=go test ./...
+	desc=Run tests
+	require=vet
+	cmd=go test ./...
