@@ -1,0 +1,12 @@
+[data-theme=dark] {
+	--bg: #1a1a2e;
+	--text: #e0e0e0;
+	--border: #333;
+	--accent: #64b5f6;
+	--hover: #2a2a3e;
+	--header-bg: #16213e;
+	--meta-bg: #2a2a3e;
+	--meta-label: #aaa;
+	--toc-bg: #1a1a2e;
+	--toc-border: #444;
+}

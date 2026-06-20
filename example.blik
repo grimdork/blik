@@ -1,0 +1,21 @@
+; blik per-directory configuration.
+; Place this file in any directory under the serve root to enable
+; handlers for that directory and its children (config is inherited).
+
+; Files matching these glob patterns are rendered as Markdown.
+markdown_patterns=*.md, *.markdown
+
+; Files matching these glob patterns are served as archives
+; (download prompt rather than raw display).
+archive_patterns=*.zip, *.tar.gz, *.tgz, *.tar
+
+; Files matching these glob patterns show an info page when
+; accessed with the ?info query parameter (e.g. file.zip?info).
+info_patterns=*.zip, *.tar.gz, *.tgz, *.tar
+
+; Optional template subtree overrides. When set, blik looks for
+;   <value>/render.gohtml   (markdown_template)
+;   <value>/archive.gohtml  (archive_template)
+; in the configured templates directory.
+; markdown_template=mytheme/md
+; archive_template=mytheme/archive
