@@ -20,5 +20,10 @@ func main() {
 	mux.HandleFunc("/health", healthHandler)
 	mux.Handle("/", h)
 
-	serve(cfg, recoveryMiddleware(loggingMiddleware(mux)))
+	hnd := http.Handler(mux)
+	if cfg.ServerName != "" {
+		hnd = serverHeaderMiddleware(hnd, cfg.ServerName)
+	}
+
+	serve(cfg, recoveryMiddleware(loggingMiddleware(hnd)))
 }

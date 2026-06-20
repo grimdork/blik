@@ -15,6 +15,7 @@ type Config struct {
 	Root        string
 	TemplateDir string
 	IconsDir    string
+	ServerName  string
 }
 
 func (c *Config) Addr() string {
@@ -96,6 +97,10 @@ func parseConfig() *Config {
 	abs, err := filepath.Abs(cfg.Root)
 	if err == nil {
 		cfg.Root = abs
+	}
+
+	if v := os.Getenv("DOMAIN"); v != "" {
+		cfg.ServerName = v
 	}
 
 	return cfg

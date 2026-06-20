@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net"
 	"net/http"
 	"os"
 	"runtime/debug"
@@ -26,6 +27,13 @@ func (rw *responseWriter) Write(b []byte) (int, error) {
 	return rw.ResponseWriter.Write(b)
 }
 
+func serverHeaderMiddleware(next http.Handler, name string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Server", name)
+		next.ServeHTTP(w, r)
+	})
+}
+
 func statusColour(code int) string {
 	switch {
 	case code >= 500:
@@ -39,12 +47,26 @@ func statusColour(code int) string {
 	}
 }
 
+func clientIP(r *http.Request) string {
+	if fwd := r.Header.Get("X-Forwarded-For"); fwd != "" {
+		return fwd
+	}
+	if rip := r.Header.Get("X-Real-IP"); rip != "" {
+		return rip
+	}
+	host, _, err := net.SplitHostPort(r.RemoteAddr)
+	if err != nil {
+		return r.RemoteAddr
+	}
+	return host
+}
+
 func loggingMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		start := time.Now()
 		rw := &responseWriter{ResponseWriter: w}
 		next.ServeHTTP(rw, r)
-		fx.Println("{logstamp} {} {} {} {}", r.Method, r.URL.Path, statusColour(rw.status), time.Since(start))
+		fx.Println("{logstamp} {} {} {} {} {}", r.Method, r.URL.Path, statusColour(rw.status), clientIP(r), time.Since(start))
 	})
 }
 
