@@ -132,10 +132,15 @@ func TestHasInfo(t *testing.T) {
 func TestLoadFile(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".blik")
-	content := `markdown_patterns=*.md, *.markdown
-archive_patterns=*.zip, *.tar.gz
-info_patterns=*.zip
-markdown_template=blog/md
+	content := `[*.md, *.markdown]
+type=markdown
+template=blog/md
+
+[*.zip, *.tar.gz]
+type=archive
+
+[*.jpg, *.png]
+type=info
 `
 	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
 		t.Fatal(err)
@@ -151,11 +156,51 @@ markdown_template=blog/md
 	if len(cfg.ArchivePatterns) != 2 {
 		t.Errorf("expected 2 archive patterns, got %d", len(cfg.ArchivePatterns))
 	}
-	if len(cfg.InfoPatterns) != 1 {
-		t.Errorf("expected 1 info pattern, got %d", len(cfg.InfoPatterns))
+	if len(cfg.InfoPatterns) != 4 {
+		t.Errorf("expected 4 info patterns (2 archive + 2 info), got %d", len(cfg.InfoPatterns))
 	}
 	if cfg.MarkdownTemplate != "blog/md" {
 		t.Errorf("expected markdown_template 'blog/md', got %q", cfg.MarkdownTemplate)
+	}
+}
+
+func TestLoadFileSections(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".blik")
+	content := `[*.go]
+type=markdown
+template=code/md
+
+[*.tar]
+type=archive
+template=store/archive
+
+[*.md]
+type=info
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := loadFile(path)
+	if cfg == nil {
+		t.Fatal("loadFile returned nil")
+	}
+
+	if len(cfg.MarkdownPatterns) != 1 || cfg.MarkdownPatterns[0] != "*.go" {
+		t.Error("expected markdown pattern *.go")
+	}
+	if cfg.MarkdownTemplate != "code/md" {
+		t.Errorf("expected markdown template 'code/md', got %q", cfg.MarkdownTemplate)
+	}
+	if len(cfg.ArchivePatterns) != 1 || cfg.ArchivePatterns[0] != "*.tar" {
+		t.Error("expected archive pattern *.tar")
+	}
+	if cfg.ArchiveTemplate != "store/archive" {
+		t.Errorf("expected archive template 'store/archive', got %q", cfg.ArchiveTemplate)
+	}
+	if len(cfg.InfoPatterns) != 2 {
+		t.Errorf("expected 2 info patterns (1 archive + 1 info), got %d", len(cfg.InfoPatterns))
 	}
 }
 

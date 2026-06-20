@@ -97,17 +97,34 @@ func loadFile(path string) *Config {
 	}
 
 	cfg := &Config{}
-	if v := inif.GetString("", "markdown_patterns"); v != "" {
-		cfg.MarkdownPatterns = splitPatterns(v)
+	for _, secName := range inif.Order {
+		sec := inif.Sections[secName]
+		if sec == nil {
+			continue
+		}
+
+		t := sec.GetString("type", "")
+		if t == "" {
+			continue
+		}
+
+		patterns := splitPatterns(secName)
+		switch t {
+		case "markdown":
+			cfg.MarkdownPatterns = append(cfg.MarkdownPatterns, patterns...)
+			if tmpl := sec.GetString("template", ""); tmpl != "" {
+				cfg.MarkdownTemplate = tmpl
+			}
+		case "archive":
+			cfg.ArchivePatterns = append(cfg.ArchivePatterns, patterns...)
+			cfg.InfoPatterns = append(cfg.InfoPatterns, patterns...)
+			if tmpl := sec.GetString("template", ""); tmpl != "" {
+				cfg.ArchiveTemplate = tmpl
+			}
+		case "info":
+			cfg.InfoPatterns = append(cfg.InfoPatterns, patterns...)
+		}
 	}
-	if v := inif.GetString("", "archive_patterns"); v != "" {
-		cfg.ArchivePatterns = splitPatterns(v)
-	}
-	if v := inif.GetString("", "info_patterns"); v != "" {
-		cfg.InfoPatterns = splitPatterns(v)
-	}
-	cfg.MarkdownTemplate = inif.GetString("", "markdown_template")
-	cfg.ArchiveTemplate = inif.GetString("", "archive_template")
 	return cfg
 }
 

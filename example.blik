@@ -2,20 +2,19 @@
 ; Place this file in any directory under the serve root to enable
 ; handlers for that directory and its children (config is inherited).
 
-; Files matching these glob patterns are rendered as Markdown.
-markdown_patterns=*.md, *.markdown
+; Section names are comma-separated glob patterns.
+; The 'type' property selects the handler:
 
-; Files matching these glob patterns are served as archives
-; (download prompt rather than raw display).
-archive_patterns=*.zip, *.tar.gz, *.tgz, *.tar
+[*.md, *.markdown]
+type=markdown
+; template=mytheme/md   ; optional: use mytheme/md/render.gohtml
 
-; Files matching these glob patterns show an info page when
-; accessed with the ?info query parameter (e.g. file.zip?info).
-info_patterns=*.zip, *.tar.gz, *.tgz, *.tar
+[*.zip, *.tar.gz, *.tgz, *.tar]
+type=archive
+; template=mytheme/archive  ; optional: use mytheme/archive/archive.gohtml
 
-; Optional template subtree overrides. When set, blik looks for
-;   <value>/render.gohtml   (markdown_template)
-;   <value>/archive.gohtml  (archive_template)
-; in the configured templates directory.
-; markdown_template=mytheme/md
-; archive_template=mytheme/archive
+; Files listed here show an info page when accessed with ?info
+; (e.g. file.zip?info) without being downloaded as archives.
+
+[*.jpg, *.png]
+type=info
