@@ -12,6 +12,7 @@ func main() {
 	cfg := parseConfig()
 
 	blikCfg := blikconfig.NewStore(cfg.Root)
+	blikCfg.Preload()
 	tmpl := template.NewEngine(cfg.TemplateDir)
 	h := content.NewHandler(cfg.Root, blikCfg, tmpl)
 

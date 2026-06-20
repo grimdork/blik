@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/grimdork/climate/ini"
+	"github.com/grimdork/climate/loglines"
 )
 
 type Config struct {
@@ -44,6 +45,21 @@ func (s *Store) Invalidate(dir string) {
 	s.mu.Lock()
 	delete(s.cache, dir)
 	s.mu.Unlock()
+}
+
+func (s *Store) Preload() {
+	err := filepath.Walk(s.root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return nil
+		}
+		if info.IsDir() {
+			s.GetConfig(path)
+		}
+		return nil
+	})
+	if err != nil {
+		loglines.Err("preload: %s", err)
+	}
 }
 
 func (s *Store) loadConfig(dir string) *Config {
@@ -136,25 +152,13 @@ func mergeConfigs(parent, local *Config) *Config {
 	return cfg
 }
 
-var defaultMarkdownPatterns = []string{"*.md", "*.markdown"}
-var defaultArchivePatterns = []string{"*.zip", "*.tar", "*.tar.gz", "*.tgz"}
-
 func (c *Config) MatchHandler(name string) string {
-	patterns := c.MarkdownPatterns
-	if len(patterns) == 0 {
-		patterns = defaultMarkdownPatterns
-	}
-	for _, p := range patterns {
+	for _, p := range c.MarkdownPatterns {
 		if ok, _ := filepath.Match(p, name); ok {
 			return "markdown"
 		}
 	}
-
-	patterns = c.ArchivePatterns
-	if len(patterns) == 0 {
-		patterns = defaultArchivePatterns
-	}
-	for _, p := range patterns {
+	for _, p := range c.ArchivePatterns {
 		if ok, _ := filepath.Match(p, name); ok {
 			return "archive"
 		}

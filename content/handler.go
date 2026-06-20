@@ -1,7 +1,6 @@
 package content
 
 import (
-	"bytes"
 	"fmt"
 	"html/template"
 	"net/http"
@@ -56,11 +55,15 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 
 	dir := filepath.Dir(fullPath)
+	if info.IsDir() {
+		dir = fullPath
+	}
 	cfg := h.blikStore.GetConfig(dir)
 
 	if !info.IsDir() {
 		name := filepath.Base(fullPath)
-		if r.URL.Query().Get("info") == "" {
+		_, wantsInfo := r.URL.Query()["info"]
+		if !wantsInfo {
 			switch cfg.MatchHandler(name) {
 			case "markdown":
 				h.serveMarkdown(w, r, fullPath, name, cfg)
@@ -91,21 +94,22 @@ func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath
 		return
 	}
 
-	htmlContent, err := render.Markdown(src)
+	result, err := render.Markdown(src)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
 
-	css, darkCSS, printCSS := h.tmpl.CSS("markdown")
-	tmplName := "markdown/render.gohtml"
+	css, darkCSS, printCSS := h.tmpl.CSS("md")
+	tmplName := "md/render.gohtml"
 	if cfg.MarkdownTemplate != "" {
 		tmplName = cfg.MarkdownTemplate + "/render.gohtml"
 	}
 
 	out, err := h.tmpl.Render(tmplName, map[string]any{
 		"Title":    name,
-		"Content":  template.HTML(htmlContent),
+		"Content":  template.HTML(result.HTML),
+		"Headings": result.Headings,
 		"CSS":      css,
 		"DarkCSS":  darkCSS,
 		"PrintCSS": printCSS,
@@ -137,37 +141,19 @@ func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullP
 
 	size := formatSize(ainfo.TotalSize)
 	tmplName := "archive/archive.gohtml"
+	css, darkCSS, printCSS := h.tmpl.CSS("archive")
 	out, err := h.tmpl.Render(tmplName, map[string]any{
 		"FileName":  name,
 		"Format":    ainfo.Format,
 		"FileCount": ainfo.FileCount,
 		"Size":      size,
 		"Tree":      template.HTML(ainfo.TreeHTML),
+		"CSS":       css,
+		"DarkCSS":   darkCSS,
+		"PrintCSS":  printCSS,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-
-	css, darkCSS, printCSS := h.tmpl.CSS("archive")
-	if css != "" || darkCSS != "" || printCSS != "" {
-		var b bytes.Buffer
-		b.WriteString("<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n<meta charset=\"UTF-8\">\n<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n")
-		b.WriteString("<title>" + name + "</title>\n")
-		if css != "" {
-			b.WriteString("<style>" + css + "</style>\n")
-		}
-		if darkCSS != "" {
-			b.WriteString("<style media=\"(prefers-color-scheme:dark)\">" + darkCSS + "</style>\n")
-		}
-		if printCSS != "" {
-			b.WriteString("<style media=\"print\">" + printCSS + "</style>\n")
-		}
-		b.WriteString("</head>\n<body>\n")
-		b.WriteString(out)
-		b.WriteString("</body>\n</html>\n")
-		w.Header().Set("Content-Type", "text/html; charset=utf-8")
-		fmt.Fprint(w, b.String())
 		return
 	}
 
@@ -184,6 +170,7 @@ type dirEntry struct {
 }
 
 type listingData struct {
+	Title   string
 	Path    string
 	Entries []dirEntry
 }
@@ -230,7 +217,8 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 		return entries[i].Name < entries[j].Name
 	})
 
-	out, err := h.tmpl.Render("default/listing.gohtml", listingData{
+	out, err := h.tmpl.Render("webroot/listing.gohtml", listingData{
+		Title:   "Index of " + urlPath,
 		Path:    urlPath,
 		Entries: entries,
 	})
