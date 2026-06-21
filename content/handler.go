@@ -251,8 +251,12 @@ func (h *Handler) serveInfo(w http.ResponseWriter, r *http.Request, fullPath, na
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	ext := strings.ToLower(filepath.Ext(name))
-	if ext == ".jpg" || ext == ".jpeg" || ext == ".png" || ext == ".gif" || ext == ".webp" || ext == ".bmp" || ext == ".ico" {
+	switch ext {
+	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".ico":
 		h.serveImageInfo(w, r, fullPath, name)
+		return
+	case ".mp4", ".webm", ".ogg", ".mov", ".mkv", ".avi", ".m4v", ".mp3", ".flac", ".wav", ".m4a":
+		h.serveMediaInfo(w, r, fullPath, name)
 		return
 	}
 
@@ -317,6 +321,55 @@ h1{border-bottom:2px solid #ddd;padding-bottom:8px}
 </html>`, name, name, imgSrc, format, dim, formatSize(fi.Size()))
 }
 
+func (h *Handler) serveMediaInfo(w http.ResponseWriter, r *http.Request, fullPath, name string) {
+	f, err := os.Open(fullPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	fi, err := f.Stat()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	format := guessFormat(name)
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	mediaTag := "video"
+	switch strings.ToLower(filepath.Ext(name)) {
+	case ".mp3", ".flac", ".wav", ".m4a", ".ogg":
+		mediaTag = "audio"
+	}
+
+	_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>%s</title>
+<style>
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:24px auto;padding:0 16px;background:#fff;color:#333}
+%s{max-width:100%%;border-radius:6px;margin:16px 0}
+table{width:100%%;border-collapse:collapse;margin-top:16px}
+th,td{text-align:left;padding:8px 12px;border-bottom:1px solid #ddd}
+th{font-weight:600;color:#555;width:120px}
+h1{border-bottom:2px solid #ddd;padding-bottom:8px}
+</style>
+</head>
+<body>
+<h1>%s</h1>
+<%[2]s controls src="?"></%[2]s>
+<table>
+<tr><th>Format</th><td>%s</td></tr>
+<tr><th>File size</th><td>%s</td></tr>
+</table>
+</body>
+</html>`, name, mediaTag, name, format, formatSize(fi.Size()))
+}
+
 func guessFormat(name string) string {
 	ext := strings.ToLower(filepath.Ext(name))
 	switch ext {
@@ -332,6 +385,26 @@ func guessFormat(name string) string {
 		return "BMP"
 	case ".ico":
 		return "ICO"
+	case ".mp4", ".m4v":
+		return "MP4"
+	case ".webm":
+		return "WebM"
+	case ".ogg":
+		return "OGG"
+	case ".mov":
+		return "QuickTime"
+	case ".mkv":
+		return "Matroska"
+	case ".avi":
+		return "AVI"
+	case ".mp3":
+		return "MP3"
+	case ".flac":
+		return "FLAC"
+	case ".wav":
+		return "WAV"
+	case ".m4a":
+		return "AAC"
 	}
 	return ext
 }

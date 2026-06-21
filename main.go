@@ -6,10 +6,15 @@ import (
 	"encoding/base64"
 	"mime"
 	"net/http"
+	"os"
+	"path/filepath"
+	"strings"
 
 	"blik/blikconfig"
 	"blik/content"
 	"blik/template"
+	"github.com/fsnotify/fsnotify"
+	"github.com/grimdork/climate/fx"
 )
 
 //go:embed template/static/blik.js
@@ -26,11 +31,47 @@ func init() {
 	}
 }
 
+func watchBlikFiles(root string, store *blikconfig.Store) {
+	watcher, err := fsnotify.NewWatcher()
+	if err != nil {
+		fx.Fprintln(os.Stderr, "{logstamp} {warning}config watcher:{@} unavailable — {}", err)
+		return
+	}
+	defer watcher.Close()
+
+	_ = filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err == nil && info.IsDir() {
+			watcher.Add(path)
+		}
+		return nil
+	})
+
+	for {
+		select {
+		case event, ok := <-watcher.Events:
+			if !ok {
+				return
+			}
+			if strings.HasSuffix(event.Name, ".blik") {
+				dir := filepath.Dir(event.Name)
+				store.Invalidate(dir)
+				fx.Println("{logstamp} {info}config:{@} reloaded {}", dir)
+			}
+		case err, ok := <-watcher.Errors:
+			if !ok {
+				return
+			}
+			fx.Fprintln(os.Stderr, "{logstamp} {warning}config watcher:{@} {}", err)
+		}
+	}
+}
+
 func main() {
 	cfg := parseConfig()
 
 	blikCfg := blikconfig.NewStore(cfg.Root)
 	blikCfg.Preload()
+	go watchBlikFiles(cfg.Root, blikCfg)
 	tmpl := template.NewEngine(cfg.TemplateDir)
 	if blikSRI != "" {
 		tmpl.SetSRI(blikSRI)
