@@ -5,6 +5,7 @@ import (
 	"archive/zip"
 	"compress/gzip"
 	"fmt"
+	"html"
 	"io"
 	"os"
 	"sort"
@@ -176,14 +177,15 @@ func (tb *treeBuilder) buildNode(b *strings.Builder, node *treeNode, depth int) 
 
 	for _, name := range names {
 		child := node.children[name]
+		safeName := html.EscapeString(name)
 		if child.isDir || len(child.children) > 0 {
 			fmt.Fprintf(b, "<details%s>\n<summary class=\"dir\">%s/</summary>\n",
-				openAttr(depth), name)
+				openAttr(depth), safeName)
 			tb.buildNode(b, child, depth+1)
 			b.WriteString("</details>\n")
 		} else {
 			fmt.Fprintf(b, "<div class=\"file\">%s<span>%d</span></div>\n",
-				name, child.size())
+				safeName, child.size())
 		}
 	}
 }

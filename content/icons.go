@@ -12,6 +12,7 @@ import (
 var (
 	iconCache   map[string]string
 	iconOnce    sync.Once
+	iconMu      sync.RWMutex
 	iconDir     string
 	defaultIcon string
 )
@@ -101,6 +102,35 @@ var imageExts = map[string]bool{
 	".webp": true,
 }
 
+var mediaExts = map[string]bool{
+	".avi":  true,
+	".flac": true,
+	".m4a":  true,
+	".m4v":  true,
+	".mkv":  true,
+	".mov":  true,
+	".mp3":  true,
+	".mp4":  true,
+	".ogg":  true,
+	".wav":  true,
+	".webm": true,
+}
+
+var audioExts = map[string]bool{
+	".flac": true,
+	".m4a":  true,
+	".mp3":  true,
+	".ogg":  true,
+	".wav":  true,
+}
+
+var archiveExts = map[string]bool{
+	".tar":    true,
+	".tar.gz": true,
+	".tgz":    true,
+	".zip":    true,
+}
+
 func initIconCache(dir string) {
 	iconDir = dir
 	iconOnce.Do(func() {
@@ -124,16 +154,20 @@ func iconName(name string, isDir bool) string {
 }
 
 func iconSVG(name string, isDir bool) string {
-	init := iconCache
-	_ = init
-
 	key := iconName(name, isDir)
+
+	iconMu.RLock()
 	if cached, ok := iconCache[key]; ok {
+		iconMu.RUnlock()
 		return cached
 	}
+	iconMu.RUnlock()
 
 	svg := loadSVG(key)
+
+	iconMu.Lock()
 	iconCache[key] = svg
+	iconMu.Unlock()
 	return svg
 }
 
@@ -150,6 +184,20 @@ func loadSVG(name string) string {
 func isImage(name string) bool {
 	ext := strings.ToLower(filepath.Ext(name))
 	return imageExts[ext]
+}
+
+func isMedia(name string) bool {
+	ext := strings.ToLower(filepath.Ext(name))
+	return mediaExts[ext]
+}
+
+func isArchive(name string) bool {
+	n := strings.ToLower(name)
+	if strings.HasSuffix(n, ".tar.gz") || strings.HasSuffix(n, ".tgz") {
+		return true
+	}
+	ext := filepath.Ext(n)
+	return archiveExts[ext]
 }
 
 func thumbPath(fullPath string) string {

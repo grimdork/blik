@@ -18,6 +18,7 @@ import (
 	"blik/blikconfig"
 	"blik/render"
 	bliktmpl "blik/template"
+	"github.com/grimdork/climate/fx"
 )
 
 const renderSuffix = "/render.gohtml"
@@ -137,13 +138,15 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, fullPath, na
 func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
 	src, err := os.ReadFile(fullPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
 	result, err := render.Markdown(src)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -163,7 +166,8 @@ func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath
 		"MdLayout": cfg.MdLayout,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -174,7 +178,8 @@ func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath
 func (h *Handler) serveData(w http.ResponseWriter, r *http.Request, fullPath, name, format string, cfg *blikconfig.Config) {
 	f, err := os.Open(fullPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer f.Close()
@@ -189,7 +194,8 @@ func (h *Handler) serveData(w http.ResponseWriter, r *http.Request, fullPath, na
 		}
 		tbl, err := render.TableFromCSV(f, comma)
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		out, err := h.tmpl.Render("data/table.gohtml", map[string]any{
@@ -202,7 +208,8 @@ func (h *Handler) serveData(w http.ResponseWriter, r *http.Request, fullPath, na
 			"Format":   format,
 		})
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -223,7 +230,8 @@ func (h *Handler) serveData(w http.ResponseWriter, r *http.Request, fullPath, na
 			root, err = render.TreeFromINI(f)
 		}
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		treeHTML := render.RenderTree(root)
@@ -234,7 +242,8 @@ func (h *Handler) serveData(w http.ResponseWriter, r *http.Request, fullPath, na
 			"DarkCSS": darkCSS,
 		})
 		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+			http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 			return
 		}
 		w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -250,12 +259,11 @@ func (h *Handler) serveInfo(w http.ResponseWriter, r *http.Request, fullPath, na
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
-	ext := strings.ToLower(filepath.Ext(name))
-	switch ext {
-	case ".jpg", ".jpeg", ".png", ".gif", ".webp", ".bmp", ".ico":
+	if isImage(name) {
 		h.serveImageInfo(w, r, fullPath, name)
 		return
-	case ".mp4", ".webm", ".ogg", ".mov", ".mkv", ".avi", ".m4v", ".mp3", ".flac", ".wav", ".m4a":
+	}
+	if isMedia(name) {
 		h.serveMediaInfo(w, r, fullPath, name)
 		return
 	}
@@ -266,7 +274,8 @@ func (h *Handler) serveInfo(w http.ResponseWriter, r *http.Request, fullPath, na
 func (h *Handler) serveImageInfo(w http.ResponseWriter, r *http.Request, fullPath, name string) {
 	f, err := os.Open(fullPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer f.Close()
@@ -277,7 +286,9 @@ func (h *Handler) serveImageInfo(w http.ResponseWriter, r *http.Request, fullPat
 		format = decName
 		dim = fmt.Sprintf("%dx%d", cfg.Width, cfg.Height)
 	}
-	f.Seek(0, 0)
+	if _, err := f.Seek(0, 0); err != nil {
+		fx.Fprintln(os.Stderr, "{logstamp} {warning}handler:{@} seek failed — {}", fullPath, err)
+	}
 
 	if format == "unknown" {
 		format = guessFormat(name)
@@ -285,7 +296,8 @@ func (h *Handler) serveImageInfo(w http.ResponseWriter, r *http.Request, fullPat
 
 	fi, err := f.Stat()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -324,14 +336,16 @@ h1{border-bottom:2px solid #ddd;padding-bottom:8px}
 func (h *Handler) serveMediaInfo(w http.ResponseWriter, r *http.Request, fullPath, name string) {
 	f, err := os.Open(fullPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 	defer f.Close()
 
 	fi, err := f.Stat()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -339,8 +353,7 @@ func (h *Handler) serveMediaInfo(w http.ResponseWriter, r *http.Request, fullPat
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	mediaTag := "video"
-	switch strings.ToLower(filepath.Ext(name)) {
-	case ".mp3", ".flac", ".wav", ".m4a", ".ogg":
+	if audioExts[strings.ToLower(filepath.Ext(name))] {
 		mediaTag = "audio"
 	}
 
@@ -412,7 +425,8 @@ func guessFormat(name string) string {
 func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
 	ainfo, err := archive.Read(fullPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -434,7 +448,8 @@ func (h *Handler) serveArchiveInfo(w http.ResponseWriter, r *http.Request, fullP
 		"PrintCSS":  printCSS,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -455,7 +470,8 @@ type dirEntry struct {
 func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPath, urlPath string, cfg *blikconfig.Config) {
 	dirents, err := os.ReadDir(fullPath)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 
@@ -515,7 +531,8 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 		"Layout":   cfg.Layout,
 	})
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		fx.Fprintln(os.Stderr, "{logstamp} {danger}handler:{@} {}", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return
 	}
 

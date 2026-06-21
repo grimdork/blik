@@ -38,6 +38,7 @@ func securityHeadersMiddleware(next http.Handler, csp, hsts string) http.Handler
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		w.Header().Set("Access-Control-Allow-Origin", "*")
 		if csp != "" {
 			w.Header().Set("Content-Security-Policy", csp)
 		}
