@@ -34,6 +34,20 @@ func serverHeaderMiddleware(next http.Handler, name string) http.Handler {
 	})
 }
 
+func securityHeadersMiddleware(next http.Handler, csp, hsts string) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		w.Header().Set("Referrer-Policy", "strict-origin-when-cross-origin")
+		if csp != "" {
+			w.Header().Set("Content-Security-Policy", csp)
+		}
+		if hsts != "" {
+			w.Header().Set("Strict-Transport-Security", hsts)
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func statusColour(code int) string {
 	switch {
 	case code >= 500:

@@ -16,15 +16,30 @@ type Config struct {
 	InfoPatterns     []string
 	MarkdownTemplate string
 	ArchiveTemplate  string
+	DataPatterns     map[string][]string
 	Thumbnails       bool
 	Symlinks         bool
 	IndexFiles       []string
+	GenerateThumbs   bool
+	ThumbSize        string
+	ThumbWorkers     int
+	Layout           string
+	MdLayout         string
+	CSP              string
+	HSTS             string
 }
 
 func defaultConfig() *Config {
 	return &Config{
-		Thumbnails: true,
-		Symlinks:   true,
+		Thumbnails:     true,
+		Symlinks:       true,
+		GenerateThumbs: false,
+		ThumbSize:      "256w",
+		ThumbWorkers:   1,
+		Layout:         "single",
+		MdLayout:       "single",
+		CSP:            "default-src 'none'; img-src 'self' data: https:; media-src 'self'; font-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'; connect-src 'self'; manifest-src 'self'",
+		HSTS:           "max-age=31536000; includeSubDomains",
 	}
 }
 
@@ -124,6 +139,23 @@ func loadFile(path string) *Config {
 			if idx := sec.GetString("index", ""); idx != "" {
 				cfg.IndexFiles = splitPatterns(idx)
 			}
+			cfg.GenerateThumbs = sec.GetBool("thumbs", cfg.GenerateThumbs)
+			if sz := sec.GetString("thumbsize", ""); sz != "" {
+				cfg.ThumbSize = sz
+			}
+			cfg.ThumbWorkers = int(sec.GetInt("workers", int64(cfg.ThumbWorkers)))
+			if lay := sec.GetString("layout", ""); lay != "" {
+				cfg.Layout = lay
+			}
+			if lay := sec.GetString("mdlayout", ""); lay != "" {
+				cfg.MdLayout = lay
+			}
+			if v := sec.GetString("csp", ""); v != "" {
+				cfg.CSP = v
+			}
+			if v := sec.GetString("hsts", ""); v != "" {
+				cfg.HSTS = v
+			}
 			continue
 		}
 
@@ -148,6 +180,11 @@ func loadFile(path string) *Config {
 			}
 		case "info":
 			cfg.InfoPatterns = append(cfg.InfoPatterns, patterns...)
+		case "json", "xml", "yaml", "toml", "ini", "csv", "tsv":
+			if cfg.DataPatterns == nil {
+				cfg.DataPatterns = make(map[string][]string)
+			}
+			cfg.DataPatterns[t] = append(cfg.DataPatterns[t], patterns...)
 		}
 	}
 
@@ -189,6 +226,22 @@ func mergeConfigs(parent, local *Config, hasBlik bool) *Config {
 	if !hasBlik {
 		local.Thumbnails = parent.Thumbnails
 		local.Symlinks = parent.Symlinks
+		local.GenerateThumbs = parent.GenerateThumbs
+		local.ThumbSize = parent.ThumbSize
+		local.ThumbWorkers = parent.ThumbWorkers
+		local.Layout = parent.Layout
+		local.MdLayout = parent.MdLayout
+		local.CSP = parent.CSP
+		local.HSTS = parent.HSTS
+		if local.DataPatterns == nil {
+			local.DataPatterns = parent.DataPatterns
+		} else {
+			for format, patterns := range parent.DataPatterns {
+				if _, ok := local.DataPatterns[format]; !ok {
+					local.DataPatterns[format] = patterns
+				}
+			}
+		}
 	}
 	return local
 }
@@ -202,6 +255,13 @@ func (c *Config) MatchHandler(name string) string {
 	for _, p := range c.ArchivePatterns {
 		if ok, _ := filepath.Match(p, name); ok {
 			return "archive"
+		}
+	}
+	for format, patterns := range c.DataPatterns {
+		for _, p := range patterns {
+			if ok, _ := filepath.Match(p, name); ok {
+				return format
+			}
 		}
 	}
 	return ""

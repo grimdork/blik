@@ -31,6 +31,12 @@ type Handler struct {
 
 func NewHandler(root string, bs *blikconfig.Store, tmpl *bliktmpl.Engine, iconDir string) *Handler {
 	initIconCache(iconDir)
+
+	rootCfg := bs.GetConfig(root)
+	if rootCfg.GenerateThumbs {
+		go startThumbWorkers(root, rootCfg)
+	}
+
 	return &Handler{
 		root:      root,
 		blikStore: bs,
@@ -99,9 +105,14 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
+	if _, wantsRaw := r.URL.Query()["raw"]; wantsRaw {
+		http.ServeFile(w, r, fullPath)
+		return
+	}
 	_, wantsInfo := r.URL.Query()["info"]
 	if !wantsInfo {
-		switch cfg.MatchHandler(name) {
+		handler := cfg.MatchHandler(name)
+		switch handler {
 		case "markdown":
 			h.serveMarkdown(w, r, fullPath, name, cfg)
 			return
@@ -109,9 +120,12 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, fullPath, na
 			w.Header().Set("Content-Type", "application/octet-stream")
 			http.ServeFile(w, r, fullPath)
 			return
+		case "json", "xml", "yaml", "toml", "ini", "csv", "tsv":
+			h.serveData(w, r, fullPath, name, handler, cfg)
+			return
 		}
 	} else {
-		if cfg.HasInfo(name) {
+		if cfg.HasInfo(name) || isImage(name) {
 			h.serveInfo(w, r, fullPath, name, cfg)
 			return
 		}
@@ -146,6 +160,7 @@ func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath
 		"CSS":      css,
 		"DarkCSS":  darkCSS,
 		"PrintCSS": printCSS,
+		"MdLayout": cfg.MdLayout,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -154,6 +169,77 @@ func (h *Handler) serveMarkdown(w http.ResponseWriter, r *http.Request, fullPath
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(w, out)
+}
+
+func (h *Handler) serveData(w http.ResponseWriter, r *http.Request, fullPath, name, format string, cfg *blikconfig.Config) {
+	f, err := os.Open(fullPath)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer f.Close()
+
+	css, darkCSS, _ := h.tmpl.CSS("data")
+
+	switch format {
+	case "csv", "tsv":
+		comma := rune(',')
+		if format == "tsv" {
+			comma = '\t'
+		}
+		tbl, err := render.TableFromCSV(f, comma)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		out, err := h.tmpl.Render("data/table.gohtml", map[string]any{
+			"Title":    name,
+			"Headers":  tbl.Headers,
+			"Rows":     tbl.Rows,
+			"RowCount": tbl.RowCount,
+			"CSS":      css,
+			"DarkCSS":  darkCSS,
+			"Format":   format,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, out)
+
+	default:
+		var root render.Node
+		switch format {
+		case "json":
+			root, err = render.TreeFromJSON(f)
+		case "xml":
+			root, err = render.TreeFromXML(f)
+		case "yaml":
+			root, err = render.TreeFromYAML(f)
+		case "toml":
+			root, err = render.TreeFromTOML(f)
+		case "ini":
+			root, err = render.TreeFromINI(f)
+		}
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		treeHTML := render.RenderTree(root)
+		out, err := h.tmpl.Render("data/render.gohtml", map[string]any{
+			"Title":   name,
+			"Tree":    template.HTML(treeHTML),
+			"CSS":     css,
+			"DarkCSS": darkCSS,
+		})
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprint(w, out)
+	}
 }
 
 func (h *Handler) serveInfo(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
@@ -199,6 +285,11 @@ func (h *Handler) serveImageInfo(w http.ResponseWriter, r *http.Request, fullPat
 		return
 	}
 
+	imgSrc := "?"
+	if _, err := os.Stat(fullPath + ".thumb"); err == nil {
+		imgSrc = name + ".thumb"
+	}
+
 	_, _ = fmt.Fprintf(w, `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -216,14 +307,14 @@ h1{border-bottom:2px solid #ddd;padding-bottom:8px}
 </head>
 <body>
 <h1>%s</h1>
-<img src="?">
+<img src="%s">
 <table>
 <tr><th>Format</th><td>%s</td></tr>
 <tr><th>Dimensions</th><td>%s</td></tr>
 <tr><th>File size</th><td>%s</td></tr>
 </table>
 </body>
-</html>`, name, name, format, dim, formatSize(fi.Size()))
+</html>`, name, name, imgSrc, format, dim, formatSize(fi.Size()))
 }
 
 func guessFormat(name string) string {
@@ -320,8 +411,15 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 			Icon:    template.HTML(iconSVG(name, fi.IsDir())),
 		}
 
-		if !fi.IsDir() && cfg.Thumbnails && isImage(name) && thumbExists(filepath.Join(fullPath, name)) {
-			e.Thumbnail = name + ".thumb"
+		if !fi.IsDir() && cfg.Thumbnails && isImage(name) {
+			ext := strings.ToLower(filepath.Ext(name))
+			if ext == ".ico" {
+				e.Thumbnail = name
+				e.HasInfo = true
+			} else if thumbExists(filepath.Join(fullPath, name)) {
+				e.Thumbnail = name + ".thumb"
+				e.HasInfo = true
+			}
 		}
 
 		entries = append(entries, e)
@@ -341,6 +439,7 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 		"CSS":      css,
 		"DarkCSS":  darkCSS,
 		"PrintCSS": printCSS,
+		"Layout":   cfg.Layout,
 	})
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)

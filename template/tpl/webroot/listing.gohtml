@@ -5,7 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>{{.Title}}</title>
 <style>
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;max-width:800px;margin:24px auto;padding:0 16px;background:var(--bg);color:var(--text)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;padding:0 16px;background:var(--bg);color:var(--text);margin:0}
+#listing-single,#listing-dual,#listing-triple{margin:8px 0}
 :root {
 	--bg: #fff;
 	--text: #333;
@@ -50,52 +51,82 @@ a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 .size{text-align:right;font-size:.85rem;color:var(--meta-label);white-space:nowrap}
 .time{font-size:.85rem;color:var(--meta-label);white-space:nowrap}
-.info{text-align:center}
-.info a{padding:2px 8px;border:1px solid var(--border);border-radius:4px;font-size:.75rem;color:var(--meta-label);cursor:pointer}
-.info a:hover{background:var(--hover);text-decoration:none}
-td:first-child svg{width:20px;height:20px;vertical-align:middle;margin-right:6px}
-td:first-child .thumb{width:32px;height:32px;object-fit:cover;vertical-align:middle;margin-right:6px;border-radius:3px}
+td:first-child svg, .entry-icon svg{width:20px;height:20px;vertical-align:middle;margin-right:6px}
+td:first-child .thumb, .entry-icon img{width:32px;height:32px;object-fit:cover;vertical-align:middle;margin-right:6px;border-radius:3px}
+.entry-icon{display:inline-flex;align-items:center;margin-right:4px}
+.grid{display:grid;gap:4px 24px}
+.grid.cols-2{grid-template-columns:1fr 1fr}
+.grid.cols-3{grid-template-columns:1fr 1fr 1fr}
+.grid .entry{display:flex;align-items:center;justify-content:space-between;gap:4px;padding:4px 8px;border-radius:4px}
+.grid .entry:hover{background:var(--hover)}
+.grid .entry .entry-info{display:inline-flex;align-items:center;gap:4px;min-width:0;flex:1}
+.grid .entry .entry-info a{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grid .entry .entry-meta{display:flex;gap:8px;white-space:nowrap}
+.grid .entry .meta{font-size:.75rem;color:var(--meta-label)}
+.grid .entry .info-link{padding:0 6px;border:1px solid var(--border);border-radius:4px;font-size:.7rem;color:var(--meta-label);cursor:pointer;text-decoration:none}
+.grid .entry .info-link:hover{background:var(--hover)}
+.hidden{display:none}
+@media(max-width:600px){
+	.grid.cols-2,.grid.cols-3{grid-template-columns:1fr}
+}
 </style>
 <style media="(prefers-color-scheme:dark)">{{if .DarkCSS}}{{.DarkCSS}}{{end}}</style>
 <style media="print">{{if .PrintCSS}}{{.PrintCSS}}{{end}}</style>
 </head>
-<body>
+<body data-layout="{{.Layout}}">
 <header class="topbar">
 <span class="title">{{.Title}}</span>
 <div class="controls">
-<button class="theme-btn" onclick="toggleTheme()">Toggle</button>
+<button class="layout-btn">Layout</button>
+<button class="theme-btn">Toggle</button>
 </div>
 </header>
+<div id="listing-single">
 <table>
-<tr><th>Name</th><th>Size</th><th>Modified</th><th></th></tr>
+<tr><th>Name</th><th>Size</th><th>Modified</th></tr>
 {{range .Entries}}
 <tr>
-<td>{{if .Thumbnail}}<img class="thumb" src="{{.Thumbnail}}" alt="">{{else}}{{.Icon}}{{end}}<a href="{{if .IsDir}}{{.Name}}/{{else}}{{.Name}}{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a></td>
+<td>{{if .Thumbnail}}<img class="thumb" src="{{.Thumbnail}}" alt="">{{else}}{{.Icon}}{{end}}<a href="{{if .IsDir}}{{.Name}}/{{else}}{{.Name}}{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a>{{if .HasInfo}} <a class="info-link" href="{{.Name}}?info">i</a>{{end}}</td>
 <td class="size">{{.Size}}</td>
 <td class="time">{{.ModTime}}</td>
-<td class="info">{{if .HasInfo}}<a href="{{.Name}}?info">i</a>{{end}}</td>
 </tr>
 {{end}}
 </table>
-<script>
-(function(){
-	var t=localStorage.getItem('blik-theme'),
-		b=function(){
-			var e=document.querySelector('.theme-btn');
-			if(e) e.textContent=t==='dark'?'Light':'Dark'
-		};
-	if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}
-	document.documentElement.setAttribute('data-theme',t);
-	b()
-})();
-function toggleTheme(){
-	var h=document.documentElement,
-		t=h.getAttribute('data-theme')==='dark'?'light':'dark';
-	h.setAttribute('data-theme',t);
-	localStorage.setItem('blik-theme',t);
-	var b=document.querySelector('.theme-btn');
-	if(b) b.textContent=t==='dark'?'Light':'Dark'
-}
-</script>
+</div>
+<div id="listing-dual" class="hidden">
+<div class="grid cols-2">
+{{range .Entries}}
+<div class="entry">
+<span class="entry-info">
+<span class="entry-icon">{{if .Thumbnail}}<img class="thumb" src="{{.Thumbnail}}" alt="">{{else}}{{.Icon}}{{end}}</span>
+<a href="{{if .IsDir}}{{.Name}}/{{else}}{{.Name}}{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a>
+{{if .HasInfo}}<a class="info-link" href="{{.Name}}?info">i</a>{{end}}
+</span>
+<span class="entry-meta">
+<span class="meta">{{.Size}}</span>
+<span class="meta">{{.ModTime}}</span>
+</span>
+</div>
+{{end}}
+</div>
+</div>
+<div id="listing-triple" class="hidden">
+<div class="grid cols-3">
+{{range .Entries}}
+<div class="entry">
+<span class="entry-info">
+<span class="entry-icon">{{if .Thumbnail}}<img class="thumb" src="{{.Thumbnail}}" alt="">{{else}}{{.Icon}}{{end}}</span>
+<a href="{{if .IsDir}}{{.Name}}/{{else}}{{.Name}}{{end}}">{{.Name}}{{if .IsDir}}/{{end}}</a>
+{{if .HasInfo}}<a class="info-link" href="{{.Name}}?info">i</a>{{end}}
+</span>
+<span class="entry-meta">
+<span class="meta">{{.Size}}</span>
+<span class="meta">{{.ModTime}}</span>
+</span>
+</div>
+{{end}}
+</div>
+</div>
+<script src="/blik.js" integrity="{{.SRI}}" crossorigin="anonymous"></script>
 </body>
 </html>

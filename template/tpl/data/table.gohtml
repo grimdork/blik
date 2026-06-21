@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<style>
+{{.CSS}}
+</style>
+<style media="(prefers-color-scheme:dark)">{{if .DarkCSS}}{{.DarkCSS}}{{end}}</style>
+</head>
+<body>
+<header class="topbar">
+<span class="title">{{.Title}} <span style="font-size:.75rem;color:var(--meta-label)">({{.RowCount}} rows)</span></span>
+<div class="controls">
+<button class="theme-btn">Toggle</button>
+</div>
+</header>
+<table id="data-table">
+<thead>
+<tr>
+{{range .Headers}}<th>{{.}}<span class="sort-icon"></span></th>{{end}}
+</tr>
+</thead>
+<tbody>
+{{range .Rows}}<tr>{{range .}}<td>{{.}}</td>{{end}}</tr>{{end}}
+</tbody>
+</table>
+<script src="/blik.js" integrity="{{.SRI}}" crossorigin="anonymous"></script>
+</body>
+</html>

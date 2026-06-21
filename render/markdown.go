@@ -128,9 +128,15 @@ func Markdown(src []byte) (*Result, error) {
 		return nil, err
 	}
 	return &Result{
-		HTML:     buf.String(),
+		HTML:     sanitizeHTML(buf.String()),
 		Headings: headings,
 	}, nil
+}
+
+var dangerousTags = regexp.MustCompile(`(?i)</?(?:script|link|iframe|object|embed)[^>]*>`)
+
+func sanitizeHTML(s string) string {
+	return dangerousTags.ReplaceAllString(s, "")
 }
 
 func walkPreprocess(doc ast.Node, source []byte) []Heading {

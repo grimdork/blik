@@ -9,13 +9,14 @@ import (
 	"sync"
 )
 
-//go:embed tpl/webroot/* tpl/md/* tpl/archive/*
+//go:embed tpl/webroot/* tpl/md/* tpl/archive/* tpl/data/*
 var templateFS embed.FS
 
 type Engine struct {
 	dir   string
 	mu    sync.RWMutex
 	cache map[string]*template.Template
+	sri   string
 }
 
 func NewEngine(dir string) *Engine {
@@ -25,10 +26,19 @@ func NewEngine(dir string) *Engine {
 	}
 }
 
+func (e *Engine) SetSRI(sri string) {
+	e.sri = sri
+}
+
 func (e *Engine) Render(name string, data any) (string, error) {
 	tmpl, err := e.load(name)
 	if err != nil {
 		return "", err
+	}
+	if e.sri != "" {
+		if m, ok := data.(map[string]any); ok {
+			m["SRI"] = e.sri
+		}
 	}
 	var buf strings.Builder
 	if err := tmpl.Execute(&buf, data); err != nil {

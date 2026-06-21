@@ -61,7 +61,7 @@ details[open]>.dir::before{content:"\25be "}
 <header class="topbar">
 <span class="title">{{.FileName}}</span>
 <div class="controls">
-<button class="theme-btn" onclick="toggleTheme()">Toggle</button>
+<button class="theme-btn">Toggle</button>
 </div>
 </header>
 <h1>{{.FileName}}</h1>
@@ -71,25 +71,6 @@ details[open]>.dir::before{content:"\25be "}
 <div class="meta-item"><strong>Size</strong>{{.Size}}</div>
 </div>
 {{.Tree}}
-<script>
-(function(){
-	var t=localStorage.getItem('blik-theme'),
-		b=function(){
-			var e=document.querySelector('.theme-btn');
-			if(e) e.textContent=t==='dark'?'Light':'Dark'
-		};
-	if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}
-	document.documentElement.setAttribute('data-theme',t);
-	b()
-})();
-function toggleTheme(){
-	var h=document.documentElement,
-		t=h.getAttribute('data-theme')==='dark'?'light':'dark';
-	h.setAttribute('data-theme',t);
-	localStorage.setItem('blik-theme',t);
-	var b=document.querySelector('.theme-btn');
-	if(b) b.textContent=t==='dark'?'Light':'Dark'
-}
-</script>
+<script src="/blik.js" integrity="{{.SRI}}" crossorigin="anonymous"></script>
 </body>
 </html>

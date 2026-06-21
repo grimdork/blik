@@ -12,6 +12,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 .container code{font-size:.9rem}
 .container a{color:var(--accent)}
 .container h2,.container h3,.container h4,.container h5,.container h6{margin-top:24px}
+.container.cols-dual{columns:2;column-gap:32px}
+.container.cols-dual h1,.container.cols-dual h2,.container.cols-dual h3,
+.container.cols-dual h4,.container.cols-dual h5,.container.cols-dual h6,
+.container.cols-dual pre,.container.cols-dual table,.container.cols-dual blockquote,
+.container.cols-dual img,.container.cols-dual hr{break-inside:avoid}
+.container.cols-dual ul,.container.cols-dual ol{break-inside:avoid}
 :root {
 	--bg: #fff;
 	--text: #333;
@@ -77,6 +83,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 .toc-drop a:hover{background:var(--hover)}
 .toc button::after{content:" ▾"}
 .toc.open button::after{content:" ▴"}
+.toc-h1{padding-left:0}.toc-h2{padding-left:20px}.toc-h3{padding-left:40px}.toc-h4{padding-left:60px}.toc-h5{padding-left:80px}.toc-h6{padding-left:100px}
 .container blockquote{border-left:4px solid var(--accent);padding:8px 16px;margin:16px 0;background:var(--meta-bg);border-radius:0 4px 4px 0}
 .container blockquote p{margin:4px 0}
 .container table{border-collapse:collapse;width:100%;margin:16px 0;font-size:.9rem}
@@ -112,39 +119,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 <style media="(prefers-color-scheme:dark)">{{if .DarkCSS}}{{.DarkCSS}}{{end}}</style>
 <style media="print">{{if .PrintCSS}}{{.PrintCSS}}{{end}}</style>
 </head>
-<body>
+<body data-layout="{{.MdLayout}}">
 <header class="topbar">
 <span class="title">{{.Title}}</span>
 <div class="controls">
 {{if .Headings}}<div class="toc">
-<button onclick="this.parentElement.classList.toggle('open')">Contents</button>
+<button class="toc-btn">Contents</button>
 <div class="toc-drop">
-{{range .Headings}}<a href="#{{.Anchor}}" style="padding-left:{{.Pad}}px">{{.Text}}</a>
+{{range .Headings}}<a href="#{{.Anchor}}" class="toc-h{{.Level}}">{{.Text}}</a>
 {{end}}</div>
 </div>{{end}}
-<button class="theme-btn" onclick="toggleTheme()">Toggle</button>
+<button class="layout-btn">Layout</button>
+<button class="theme-btn">Toggle</button>
 </div>
 </header>
-<div class="container">{{.Content}}</div>
-<script>
-(function(){
-	var t=localStorage.getItem('blik-theme'),
-		b=function(){
-			var e=document.querySelector('.theme-btn');
-			if(e) e.textContent=t==='dark'?'Light':'Dark'
-		};
-	if(!t){t=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}
-	document.documentElement.setAttribute('data-theme',t);
-	b()
-})();
-function toggleTheme(){
-	var h=document.documentElement,
-		t=h.getAttribute('data-theme')==='dark'?'light':'dark';
-	h.setAttribute('data-theme',t);
-	localStorage.setItem('blik-theme',t);
-	var b=document.querySelector('.theme-btn');
-	if(b) b.textContent=t==='dark'?'Light':'Dark'
-}
-</script>
+<div class="container" id="md-content">{{.Content}}</div>
+<script src="/blik.js" integrity="{{.SRI}}" crossorigin="anonymous"></script>
 </body>
 </html>

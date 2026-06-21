@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{{.Title}}</title>
+<style>
+{{.CSS}}
+</style>
+<style media="(prefers-color-scheme:dark)">{{if .DarkCSS}}{{.DarkCSS}}{{end}}</style>
+</head>
+<body>
+<header class="topbar">
+<span class="title">{{.Title}}</span>
+<div class="controls">
+<button class="theme-btn">Toggle</button>
+</div>
+</header>
+<div class="tree">{{.Tree}}</div>
+<script src="/blik.js" integrity="{{.SRI}}" crossorigin="anonymous"></script>
+</body>
+</html>

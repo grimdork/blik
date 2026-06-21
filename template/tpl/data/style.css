@@ -1,0 +1,27 @@
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;margin:0;padding:0 16px;background:var(--bg);color:var(--text)}
+:root{--bg:#fff;--text:#333;--border:#ddd;--accent:#1967d2;--hover:#f5f5f5;--header-bg:#fafafa;--meta-bg:#f5f5f5;--meta-label:#555;--key-color:#894433;--string-color:#2e7d32;--number-color:#1565c0;--bool-color:#6a1b9a;--null-color:#999;--type-label:#888;--table-border:#ddd;--table-stripe:#f9f9f9}
+[data-theme=dark]{--bg:#1a1a2e;--text:#e0e0e0;--border:#333;--accent:#64b5f6;--hover:#2a2a3e;--header-bg:#16213e;--meta-bg:#2a2a3e;--meta-label:#aaa;--key-color:#e2a476;--string-color:#87af97;--number-color:#64b5f6;--bool-color:#ce93d8;--null-color:#888;--type-label:#777;--table-border:#444;--table-stripe:#1e1e32}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:8px 16px;background:var(--header-bg);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:20}
+.topbar .title{font-size:.95rem;font-weight:600}
+.topbar .controls{display:flex;align-items:center;gap:8px}
+.topbar button{background:none;border:1px solid var(--border);border-radius:4px;padding:4px 10px;color:var(--text);cursor:pointer;font-size:.8rem}
+.topbar button:hover{background:var(--hover)}
+.tree{padding:8px 0}
+.tree details{margin:2px 0;padding-left:16px}
+.tree summary{cursor:pointer;padding:2px 4px;border-radius:3px;font-size:.85rem;color:var(--key-color)}
+.tree summary:hover{background:var(--hover)}
+.tree .leaf{padding:2px 4px 2px 16px;font-size:.85rem;display:flex;align-items:center;gap:6px}
+.tree .leaf .key{color:var(--key-color);font-weight:500}
+.tree .leaf .sep{color:var(--meta-label)}
+.tree .leaf .val-string{color:var(--string-color)}
+.tree .leaf .val-number{color:var(--number-color)}
+.tree .leaf .val-bool{color:var(--bool-color)}
+.tree .leaf .val-null{color:var(--null-color);font-style:italic}
+.tree .type-tag{font-size:.7rem;color:var(--type-label);margin-left:4px}
+table{width:100%;border-collapse:collapse;margin-top:8px;font-size:.85rem}
+th,td{text-align:left;padding:6px 10px;border-bottom:1px solid var(--table-border)}
+th{cursor:pointer;background:var(--header-bg);font-weight:600;color:var(--meta-label);position:sticky;top:48px;z-index:10;user-select:none}
+th:hover{background:var(--hover)}
+th .sort-icon{font-size:.7rem;margin-left:4px;color:var(--type-label)}
+tr:nth-child(even) td{background:var(--table-stripe)}
+tr:hover td{background:var(--hover)}
