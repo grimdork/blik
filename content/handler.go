@@ -18,8 +18,19 @@ import (
 	"blik/blikconfig"
 	"blik/render"
 	bliktmpl "blik/template"
+
 	"github.com/grimdork/climate/fx"
 )
+
+var dataContentTypes = map[string]string{
+	"json": "application/json",
+	"xml":  "application/xml",
+	"yaml": "text/yaml; charset=utf-8",
+	"toml": "application/toml",
+	"ini":  "text/plain; charset=utf-8",
+	"csv":  "text/csv; charset=utf-8",
+	"tsv":  "text/tab-separated-values; charset=utf-8",
+}
 
 const renderSuffix = "/render.gohtml"
 const archiveSuffix = "/archive.gohtml"
@@ -122,6 +133,10 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, fullPath, na
 			http.ServeFile(w, r, fullPath)
 			return
 		case "json", "xml", "yaml", "toml", "ini", "csv", "tsv":
+			if prefersNativeFormat(r, handler) {
+				serveRawDataFile(w, r, fullPath, handler)
+				return
+			}
 			h.serveData(w, r, fullPath, name, handler, cfg)
 			return
 		}
@@ -132,6 +147,33 @@ func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, fullPath, na
 		}
 	}
 
+	http.ServeFile(w, r, fullPath)
+}
+
+func prefersNativeFormat(r *http.Request, format string) bool {
+	ct := dataContentTypes[format]
+	accept := r.Header.Get("Accept")
+	if accept == "" {
+		return true
+	}
+
+	if strings.Contains(accept, ct) {
+		return true
+	}
+
+	// text/html present but native type not listed → browser navigation, show HTML view
+	if strings.Contains(accept, "text/html") {
+		return false
+	}
+
+	// */* or unknown → programmatic client, serve raw
+	return true
+}
+
+func serveRawDataFile(w http.ResponseWriter, r *http.Request, fullPath, format string) {
+	if ct, ok := dataContentTypes[format]; ok {
+		w.Header().Set("Content-Type", ct)
+	}
 	http.ServeFile(w, r, fullPath)
 }
 
@@ -350,7 +392,6 @@ func (h *Handler) serveMediaInfo(w http.ResponseWriter, r *http.Request, fullPat
 	}
 
 	format := guessFormat(name)
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 
 	mediaTag := "video"
 	if audioExts[strings.ToLower(filepath.Ext(name))] {

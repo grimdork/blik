@@ -13,6 +13,7 @@ import (
 	"blik/blikconfig"
 	"blik/content"
 	"blik/template"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/grimdork/climate/fx"
 )
@@ -23,6 +24,8 @@ var blikSRI string
 
 func init() {
 	mime.AddExtensionType(".ico", "image/x-icon")
+	mime.AddExtensionType(".webp", "image/webp")
+	mime.AddExtensionType(".avif", "image/avif")
 
 	data, err := staticFS.ReadFile("template/static/blik.js")
 	if err == nil {
