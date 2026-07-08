@@ -1,28 +1,29 @@
 $OWNER=grimdork
 
 build: go
-	desc=Build the blik binary
+desc=Build the blik binary
 
 linux: go
-	desc=Build the Linux binary
-	arch=amd64
-	os=linux
+desc=Build the Linux binary
+arch=amd64
+os=linux
 
 blik: oci:scw
-	desc=Build and push the OCI image
-	require=linux
-	region=nl-ams
-	tag=latest
-	cacert=auto
-	entrypoint=/app/blik
-	os=linux
-	arch=amd64
+desc=Build and push the OCI image
+require=linux
+region=nl-ams
+tag=latest
+cacert=auto
+entrypoint=/app/blik
+arch=amd64
+os=linux
+arch=amd64
 
 vet:
-	desc=Run go vet
-	cmd=go vet ./...
+desc=Run go vet
+cmd=go vet ./...
 
 test:
-	desc=Run tests
-	require=vet
-	cmd=go test ./...
+desc=Run tests
+require=vet
+cmd=go test ./...

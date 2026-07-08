@@ -131,9 +131,10 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;m
 </div>{{end}}
 <button class="layout-btn">Layout</button>
 <button class="theme-btn">Toggle</button>
+<button class="raw-btn">Raw</button>
 </div>
 </header>
 <div class="container" id="md-content">{{.Content}}</div>
-<script src="/blik.js" integrity="{{.SRI}}" crossorigin="anonymous"></script>
+<script src="/blik.js?sri={{.SRI}}" integrity="{{.SRI}}" crossorigin="anonymous"></script>
 </body>
 </html>

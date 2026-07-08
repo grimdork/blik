@@ -3,7 +3,8 @@
 		isListing = document.getElementById('listing-single') !== null,
 		themeBtn = document.querySelector('.theme-btn'),
 		layoutBtn = document.querySelector('.layout-btn'),
-		tocBtn = document.querySelector('.toc-btn');
+		tocBtn = document.querySelector('.toc-btn'),
+		rawBtn = document.querySelector('.raw-btn');
 
 	if (!t) {
 		t = window.matchMedia('(prefers-color-scheme:dark)').matches ? 'dark' : 'light';
@@ -22,6 +23,13 @@
 	if (tocBtn) {
 		tocBtn.addEventListener('click', function () {
 			this.parentElement.classList.toggle('open');
+		});
+	}
+	if (rawBtn) {
+		rawBtn.addEventListener('click', function () {
+			var url = new URL(window.location.href);
+			url.searchParams.set('raw', '1');
+			window.location.href = url.toString();
 		});
 	}
 
