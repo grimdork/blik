@@ -28,7 +28,7 @@
 	if (rawBtn) {
 		rawBtn.addEventListener('click', function () {
 			var url = new URL(window.location.href);
-			url.searchParams.set('raw', '1');
+			url.search += (url.search ? '&' : '?') + 'raw';
 			window.location.href = url.toString();
 		});
 	}
