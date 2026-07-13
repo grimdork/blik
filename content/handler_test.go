@@ -1,6 +1,7 @@
 package content
 
 import (
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -131,6 +132,36 @@ func TestFormatSize(t *testing.T) {
 		got := formatSize(tt.input)
 		if got != tt.want {
 			t.Errorf("formatSize(%d) = %q, want %q", tt.input, got, tt.want)
+		}
+	}
+}
+
+func TestSetCompressionHeader(t *testing.T) {
+	tests := []struct {
+		name        string
+		encoding    string
+		contentType string
+	}{
+		{"file.data.br", "br", ""},
+		{"script.js.br", "br", ""},
+		{"module.wasm.br", "br", "application/wasm"},
+		{"bundle.tar.gz", "gzip", ""},
+		{"archive.gz", "gzip", ""},
+		{"module.wasm.gz", "gzip", "application/wasm"},
+		{"file.data", "", ""},
+		{"file.js", "", ""},
+		{"file.html", "", ""},
+	}
+	for _, tt := range tests {
+		w := httptest.NewRecorder()
+		setCompressionHeader(w, tt.name)
+		gotEnc := w.Header().Get("Content-Encoding")
+		if gotEnc != tt.encoding {
+			t.Errorf("setCompressionHeader(%q): Content-Encoding = %q, want %q", tt.name, gotEnc, tt.encoding)
+		}
+		gotCT := w.Header().Get("Content-Type")
+		if gotCT != tt.contentType {
+			t.Errorf("setCompressionHeader(%q): Content-Type = %q, want %q", tt.name, gotCT, tt.contentType)
 		}
 	}
 }

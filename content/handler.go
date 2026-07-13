@@ -94,6 +94,13 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	cfg = h.blikStore.GetConfig(dir)
 
+	if !cfg.Strict {
+		w.Header().Del("Content-Security-Policy")
+		w.Header().Del("Strict-Transport-Security")
+		w.Header().Del("X-Content-Type-Options")
+		w.Header().Del("Referrer-Policy")
+	}
+
 	if !info.IsDir() {
 		h.serveFile(w, r, fullPath, filepath.Base(fullPath), cfg)
 		return
@@ -117,6 +124,8 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) serveFile(w http.ResponseWriter, r *http.Request, fullPath, name string, cfg *blikconfig.Config) {
+	setCompressionHeader(w, name)
+
 	if _, wantsRaw := r.URL.Query()["raw"]; wantsRaw {
 		http.ServeFile(w, r, fullPath)
 		return
@@ -519,7 +528,7 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 	var entries []dirEntry
 	for _, de := range dirents {
 		name := de.Name()
-		if name == ".blik" || strings.HasSuffix(name, ".thumb") {
+		if name == ".blik" || strings.HasSuffix(name, ".thumb") || strings.HasSuffix(name, ".br") || strings.HasSuffix(name, ".gz") {
 			continue
 		}
 
@@ -579,6 +588,23 @@ func (h *Handler) serveDirectory(w http.ResponseWriter, r *http.Request, fullPat
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	fmt.Fprint(w, out)
+}
+
+func setCompressionHeader(w http.ResponseWriter, name string) {
+	if strings.HasSuffix(name, ".br") {
+		w.Header().Set("Content-Encoding", "br")
+		setBaseContentType(w, name[:len(name)-3])
+	} else if strings.HasSuffix(name, ".gz") {
+		w.Header().Set("Content-Encoding", "gzip")
+		setBaseContentType(w, name[:len(name)-3])
+	}
+}
+
+func setBaseContentType(w http.ResponseWriter, base string) {
+	ext := strings.ToLower(filepath.Ext(base))
+	if ext == ".wasm" {
+		w.Header().Set("Content-Type", "application/wasm")
+	}
 }
 
 func formatSize(n int64) string {

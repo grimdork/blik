@@ -17,6 +17,7 @@ type Config struct {
 	MarkdownTemplate string
 	ArchiveTemplate  string
 	DataPatterns     map[string][]string
+	Strict           bool
 	Thumbnails       bool
 	Symlinks         bool
 	IndexFiles       []string
@@ -31,6 +32,7 @@ type Config struct {
 
 func defaultConfig() *Config {
 	return &Config{
+		Strict:         true,
 		Thumbnails:     true,
 		Symlinks:       true,
 		GenerateThumbs: false,
@@ -134,6 +136,7 @@ func loadFile(path string) *Config {
 		}
 
 		if secName == "blik" {
+			cfg.Strict = sec.GetBool("strict", cfg.Strict)
 			cfg.Thumbnails = sec.GetBool("thumbnails", cfg.Thumbnails)
 			cfg.Symlinks = sec.GetBool("symlinks", cfg.Symlinks)
 			if idx := sec.GetString("index", ""); idx != "" {
@@ -224,6 +227,7 @@ func mergeConfigs(parent, local *Config, hasBlik bool) *Config {
 		local.IndexFiles = parent.IndexFiles
 	}
 	if !hasBlik {
+		local.Strict = parent.Strict
 		local.Thumbnails = parent.Thumbnails
 		local.Symlinks = parent.Symlinks
 		local.GenerateThumbs = parent.GenerateThumbs

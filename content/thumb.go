@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"blik/blikconfig"
+
 	"github.com/fsnotify/fsnotify"
 	"github.com/grimdork/climate/fx"
 )

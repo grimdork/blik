@@ -17,7 +17,6 @@ cacert=auto
 entrypoint=/app/blik
 arch=amd64
 os=linux
-arch=amd64
 
 vet:
 desc=Run go vet

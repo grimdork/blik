@@ -5,6 +5,10 @@
 ; Section names are comma-separated glob patterns.
 ; The 'type' property selects the handler:
 
+[blik]
+; strict=no   ; Disable security headers (CSP, HSTS, nosniff) for this directory and below.
+              ; Useful for content like Unity web player that needs external resources.
+
 [*.md, *.markdown]
 type=markdown
 ; template=mytheme/md   ; optional: use mytheme/md/render.gohtml

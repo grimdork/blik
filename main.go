@@ -26,6 +26,7 @@ func init() {
 	mime.AddExtensionType(".ico", "image/x-icon")
 	mime.AddExtensionType(".webp", "image/webp")
 	mime.AddExtensionType(".avif", "image/avif")
+	mime.AddExtensionType(".wasm", "application/wasm")
 
 	data, err := staticFS.ReadFile("template/static/blik.js")
 	if err == nil {

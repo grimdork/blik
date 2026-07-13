@@ -248,3 +248,134 @@ func TestStoreGetConfigCaches(t *testing.T) {
 		t.Error("GetConfig should return fresh config after Invalidate")
 	}
 }
+
+func TestLoadFileStrict(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".blik")
+	content := `[blik]
+strict=no
+
+[*.md]
+type=markdown
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := loadFile(path)
+	if cfg == nil {
+		t.Fatal("loadFile returned nil")
+	}
+	if cfg.Strict {
+		t.Error("expected strict=false")
+	}
+}
+
+func TestLoadFileStrictDefault(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".blik")
+	content := `[*.md]
+type=markdown
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg := loadFile(path)
+	if cfg == nil {
+		t.Fatal("loadFile returned nil")
+	}
+	if !cfg.Strict {
+		t.Error("expected strict=true by default")
+	}
+}
+
+func TestMergeConfigsStrictInherit(t *testing.T) {
+	parent := &Config{
+		Strict:           false,
+		MarkdownPatterns: []string{"*.md"},
+	}
+
+	t.Run("inherits strict from parent when no local blik", func(t *testing.T) {
+		local := &Config{}
+		got := mergeConfigs(parent, local, false)
+		if got.Strict {
+			t.Error("should inherit strict=false from parent")
+		}
+	})
+
+	t.Run("keeps local strict when local blik exists", func(t *testing.T) {
+		local := &Config{Strict: true}
+		got := mergeConfigs(parent, local, true)
+		if !got.Strict {
+			t.Error("should keep local strict=true")
+		}
+	})
+}
+
+func TestStoreGetConfigStrictCascade(t *testing.T) {
+	root := t.TempDir()
+	// Root has strict=no.
+	rootPath := filepath.Join(root, ".blik")
+	if err := os.WriteFile(rootPath, []byte("[blik]\nstrict=no\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	child := filepath.Join(root, "child")
+	if err := os.MkdirAll(child, 0755); err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewStore(root)
+
+	// Child without .blik should inherit strict=no from root.
+	childCfg := s.GetConfig(child)
+	if childCfg.Strict {
+		t.Error("child without .blik should inherit strict=false from parent")
+	}
+
+	// Grandchild should also inherit.
+	grandchild := filepath.Join(child, "grandchild")
+	if err := os.MkdirAll(grandchild, 0755); err != nil {
+		t.Fatal(err)
+	}
+	gcCfg := s.GetConfig(grandchild)
+	if gcCfg.Strict {
+		t.Error("grandchild should inherit strict=false")
+	}
+}
+
+func TestStoreGetConfigStrictOverride(t *testing.T) {
+	root := t.TempDir()
+	// Root has strict=no.
+	rootPath := filepath.Join(root, ".blik")
+	if err := os.WriteFile(rootPath, []byte("[blik]\nstrict=no\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	child := filepath.Join(root, "child")
+	if err := os.MkdirAll(child, 0755); err != nil {
+		t.Fatal(err)
+	}
+	// Child overrides back to strict=yes.
+	childPath := filepath.Join(child, ".blik")
+	if err := os.WriteFile(childPath, []byte("[blik]\nstrict=yes\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	s := NewStore(root)
+	childCfg := s.GetConfig(child)
+	if !childCfg.Strict {
+		t.Error("child with strict=yes should override parent's strict=no")
+	}
+
+	// Grandchild without .blik should inherit strict=yes from child.
+	grandchild := filepath.Join(child, "grandchild")
+	if err := os.MkdirAll(grandchild, 0755); err != nil {
+		t.Fatal(err)
+	}
+	gcCfg := s.GetConfig(grandchild)
+	if !gcCfg.Strict {
+		t.Error("grandchild should inherit strict=true from child")
+	}
+}
